@@ -1,3 +1,5 @@
+// 11127139 陳恩
+
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -84,6 +86,21 @@ public:
 class maxHeap {
 private:
     vector<dataType> list;
+
+public:
+    maxHeap() {
+        list.clear();
+    }
+    maxHeap(const vector<dataType>& aList): list(aList) {};
+    void reset() {
+        list.clear();
+    }
+    int getSize() {
+        return list.size();
+    }
+    int empty() {
+        return list.empty();
+    }
     void reHeap(int index) {
         // compare index with its children, determine it is necessary to swap or not
         int left = 2*index+1, right = left+1;
@@ -102,23 +119,9 @@ private:
 
         if ( max != index ) { // need to be swapped
             swap(list[index], list[max]);
-            reHeap((index-1)/2); // reHeap down
+            this->reHeap((index-1)/2); // reHeap down
         }
 
-    }
-public:
-    maxHeap() {
-        list.clear();
-    }
-    maxHeap(const vector<dataType>& aList): list(aList) {};
-    void reset() {
-        list.clear();
-    }
-    int getSize() {
-        return list.size();
-    }
-    int empty() {
-        return list.empty();
     }
     void build( const vector<dataType>& dataList ) {
         int size = dataList.size();
@@ -141,6 +144,12 @@ public:
             parent = (pos-1)/2;
         }
     }
+    void remove() {
+        int bottom = list.size()-1;
+        swap(list[0], list[bottom]);
+        list.pop_back();
+        reHeap(0);
+    }
     void print() {
         // print out the requirements
         int bottom = list.size()-1, leftBottom = 0;
@@ -152,19 +161,81 @@ public:
         cout << "\nleftmost bottom: [" << list[leftBottom].no << "] " << list[leftBottom].numOfStudent;
     }
 };
-
-class DEAP {
+class minHeap: public maxHeap {
 private:
     vector<dataType> list;
 public:
+    minHeap() {
+        list.clear();
+    }
+    void reHeap(int index) {
+        int left = 2*index+1, right = left+1;
+        if ( left >= list.size() ) { // no child to be checked
+            return;
+        }
+
+        int min = index;
+        // find the smallest one in those three nodes
+        // compare parent with left child
+        if ( list[min].numOfStudent > list[left].numOfStudent )
+            min = left;
+        if ( right < list.size() && list[min].numOfStudent > list[right].numOfStudent )
+            min = right;
+        if ( min != index ) { // need to be swapped
+            swap(list[index], list[min]);
+            reHeap((index-1)/2); // reHeap down
+        }
+    }
+    void insert(dataType newItem) {
+        // insert a new item at the bottom of heap
+
+        int pos = list.size(); // bottom index( position of the new item )
+        list.push_back(newItem);
+        int parent = (pos-1)/2;
+        // reHeap up from its parent to root at most
+        while ( parent >= 0 && list[parent].numOfStudent > list[pos].numOfStudent ) {
+            swap(list[parent], list[pos]);
+
+            // update current index of new item and its parent
+            pos = parent;
+            parent = (pos-1)/2;
+        }
+    }
+};
+
+class DEAP{
+private:
+    vector<dataType> list;
+
+    bool leftOrRight(int index) {
+        // return true when the index is in the min heap
+        // otherwise, return false
+        int left = 1, right = 1;
+        while ( right < index ) {
+            left = left*2+1;
+            right = 2*right+2;
+            if ( left <= index && index <= right )
+                return true;
+        }
+        return false;
+    }
+public:
     DEAP() {
         list.clear();
+        dataType dummy;
+        list.push_back( dummy ); // insert a root
     }
     ~DEAP() {
         reset();
     }
     void reset() {
         list.clear();
+        dataType dummy;
+        list.push_back( dummy ); // insert a root
+    }
+    void insert(const dataType& newItem) {
+        // determine it is in min or max heap ( left or right )
+
     }
 };
 
