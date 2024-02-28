@@ -84,10 +84,8 @@ public:
 };
 
 class maxHeap {
-private:
-    vector<dataType> list;
-
 public:
+    vector<dataType> list;
     maxHeap() {
         list.clear();
     }
@@ -96,7 +94,7 @@ public:
         list.clear();
     }
     int getSize() {
-        return list.size();
+        return this->list.size();
     }
     int empty() {
         return list.empty();
@@ -119,7 +117,7 @@ public:
 
         if ( max != index ) { // need to be swapped
             swap(list[index], list[max]);
-            this->reHeap((index-1)/2); // reHeap down
+            reHeap((index-1)/2); // reHeap down
         }
 
     }
@@ -136,6 +134,7 @@ public:
         list.push_back(newItem);
         int parent = (pos-1)/2;
         // reHeap up from its parent to root at most
+        // if parent < child, swap
         while ( parent >= 0 && list[parent].numOfStudent < list[pos].numOfStudent ) {
             swap(list[parent], list[pos]);
 
@@ -161,11 +160,13 @@ public:
         cout << "\nleftmost bottom: [" << list[leftBottom].no << "] " << list[leftBottom].numOfStudent;
     }
 };
-class minHeap: public maxHeap {
-private:
-    vector<dataType> list;
+class minHeap{
 public:
+    vector<dataType> list;
     minHeap() {
+        list.clear();
+    }
+    void reset() {
         list.clear();
     }
     void reHeap(int index) {
@@ -193,6 +194,7 @@ public:
         list.push_back(newItem);
         int parent = (pos-1)/2;
         // reHeap up from its parent to root at most
+        // if parent > child, swap
         while ( parent >= 0 && list[parent].numOfStudent > list[pos].numOfStudent ) {
             swap(list[parent], list[pos]);
 
@@ -201,12 +203,19 @@ public:
             parent = (pos-1)/2;
         }
     }
+    int getSize() {
+        return this->list.size();
+    }
+    int empty() {
+        return list.empty();
+    }
 };
 
 class DEAP{
 private:
-    vector<dataType> list;
-
+    minHeap leftHeap;
+    maxHeap rightHeap;
+    int size;
     bool leftOrRight(int index) {
         // return true when the index is in the min heap
         // otherwise, return false
@@ -214,28 +223,110 @@ private:
         while ( right < index ) {
             left = left*2+1;
             right = 2*right+2;
-            if ( left <= index && index <= right )
-                return true;
         }
-        return false;
+        if ( left <= index && index <= right )
+            return true;
+         else
+             return false;
+    }
+    int exchange(int pos, bool leftOrNot) {
+        // compare left[pos] with right[pos] if right[pos] exist
+        if ( leftOrNot ) { // check left[pos] with right[(pos-1)/2] (the parent)
+            int parent = (pos-1)/2;
+            if ( parent < rightHeap.getSize()&& leftHeap.list[pos].numOfStudent > rightHeap.list[parent].numOfStudent) {
+                swap(leftHeap.list[pos], rightHeap.list[parent]);
+                return parent;
+            }
+        }
+        else {
+            if (leftHeap.list[pos].numOfStudent > rightHeap.list[pos].numOfStudent) {
+                swap(leftHeap.list[pos], rightHeap.list[pos]);
+                return pos;
+            }
+        }
+        return -1;
     }
 public:
     DEAP() {
-        list.clear();
-        dataType dummy;
-        list.push_back( dummy ); // insert a root
+        reset();
     }
     ~DEAP() {
         reset();
     }
     void reset() {
-        list.clear();
-        dataType dummy;
-        list.push_back( dummy ); // insert a root
+        leftHeap.reset();
+        rightHeap.reset();
+        size = 1; // dummy root
+    }
+    void build(const vector<dataType>& aList) {
+        for ( int i = 0; i < aList.size(); i++ ) {
+            insert(aList[i]);
+        }
     }
     void insert(const dataType& newItem) {
         // determine it is in min or max heap ( left or right )
+        int pos = this->size;
+        bool left = leftOrRight(pos);
+        if ( left ) { // if it is on the left side
+            leftHeap.list.push_back(newItem);
+            // check the correspond node on other side
+            pos = exchange(leftHeap.getSize()-1, left);
+            if ( pos == -1 ) {
+                pos = leftHeap.getSize()-1;
+                left = true;
+            }
+            else
+                left = false;
+        }
+        else {
+            rightHeap.list.push_back(newItem);
+            // check
+            pos = exchange(rightHeap.getSize()-1, left);
+            if ( pos == -1 ) {
+                pos = rightHeap.getSize()-1;
+                left = false;
+            }
+            else
+                left = true;
+        }
+        // reHeap up from current position
+        int parent = (pos-1)/2;
+        if (left) {
+            while (pos > 0 && leftHeap.list[pos].numOfStudent < leftHeap.list[parent].numOfStudent) {
+                swap(leftHeap.list[pos], leftHeap.list[parent]);
+                pos = parent;
+                parent = (pos-1)/2;
+            }
+        }
+        else {
+            while (pos > 0 && rightHeap.list[parent].numOfStudent < rightHeap.list[parent].numOfStudent) {
+                swap(rightHeap.list[parent], rightHeap.list[pos]);
+                pos = parent;
+                parent = (pos-1)/2;
+            }
+        }
 
+        this->size++;
+    }
+
+    void print() {
+        int left = 0;
+        while ( 2*left+1 < leftHeap.getSize() ) {
+            left = 2*left+1;
+        }
+        dataType bottom;
+        if (leftOrRight( size-1 ))
+            bottom = leftHeap.list[leftHeap.getSize()-1];
+        else
+            bottom = rightHeap.list[rightHeap.getSize()-1];
+        cout << "\n<DEAP>";
+        cout << "\nbottom: [" << bottom.no << "] " << bottom.numOfStudent;
+        cout << "\nleftmost bottom: [" << leftHeap.list[left].no << "] " << leftHeap.list[left].numOfStudent;
+    }
+    void printAllLeft() {
+        for ( int i = 0; i < leftHeap.getSize(); i++ ) {
+            cout << "\n" << i+1 << "\t[" << leftHeap.list[i].no << "] " << leftHeap.list[i].numOfStudent;
+        }
     }
 };
 
@@ -247,6 +338,7 @@ int main() {
     // command { 0: quit, 1: build a max heap, 2: build a DEAP }
     while ( keepRun ) {
         maxHeap aMaxHeap;
+        DEAP aDEAP;
         cout << "\nInput a choice(0, 1, 2):";
         cin >> command;
         switch ( command ) {
@@ -265,7 +357,12 @@ int main() {
                 aMaxHeap.print();
                 break;
             case 2:
-                // not done yet
+                if ( !aFile.readFile() ) {
+                    break;
+                }
+                aDEAP.build(aFile.getList());
+                aDEAP.printAllLeft();
+                aDEAP.print();
                 break;
             default:
                 cout << "\nCommand does not exist!";
