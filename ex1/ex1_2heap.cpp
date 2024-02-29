@@ -335,10 +335,15 @@ int main() {
     inputFile aFile;
     bool keepRun = true;
     int command = -1;
-    // command { 0: quit, 1: build a max heap, 2: build a DEAP }
+    // command = { 0: quit, 1: build a max heap, 2: build a DEAP }
     while ( keepRun ) {
         maxHeap aMaxHeap;
         DEAP aDEAP;
+        cout << "\n**** Heap Construction *****"
+                "\n* 0. QUIT                  *"
+                "\n* 1. Build a max heap      *"
+                "\n* 2. Build a DEAP          *"
+                "\n****************************";
         cout << "\nInput a choice(0, 1, 2):";
         cin >> command;
         switch ( command ) {
@@ -368,5 +373,6 @@ int main() {
                 cout << "\nCommand does not exist!";
                 break;
         }
+        aFile.reset();
     }
 }
