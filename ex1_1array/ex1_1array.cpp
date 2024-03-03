@@ -36,11 +36,11 @@ public:
         fstream inFile;
         string fileName;
         this->reset();
-        cout << endl << "Input a file number [0: quit]: ";
+        cout << endl << "Input a file number ([0] Quit): ";
         cin >> this->fileID;
         if ( fileID == "0" ) {
             reset();
-            return true;
+            return false;
         }
         fileName = "input" + fileID + ".txt";
         inFile.open(fileName.c_str(), fstream::in);
@@ -76,10 +76,7 @@ public:
                 } while ((pos > 0) && (fNo < 7));
                 this->inputData.push_back(oneR); } //end outer-while inFile.close();
         } // end else
-        if ( this->inputData.empty() ){
-            cout << endl << "### Get nothing from the file " << fileName << " ! ### " << endl;
-            return false;
-        } // end if
+
         return true;
     } // end of readFile
 };
@@ -89,13 +86,6 @@ public:
     vector<dataType> list;
     maxHeap() {
         list.clear();
-    }
-    maxHeap(const vector<dataType>& aList): list(aList) {};
-    void reset() {
-        list.clear();
-    }
-    int getSize() {
-        return this->list.size();
     }
     int empty() {
         return list.empty();
@@ -155,10 +145,11 @@ public:
         int bottom = list.size()-1, leftBottom = 0;
         while ( leftBottom*2+1 < list.size() )
             leftBottom = leftBottom*2 + 1;
-        cout << "\n<max heap>";
+        cout << "<max heap>";
         cout << "\nroot: [" << list[0].no << "] " << list[0].numOfStudent;
         cout << "\nbottom: [" << list[bottom].no << "] " << list[bottom].numOfStudent;
         cout << "\nleftmost bottom: [" << list[leftBottom].no << "] " << list[leftBottom].numOfStudent;
+        cout << endl;
     }
 };
 
@@ -354,10 +345,10 @@ public:
         while ( 2*left+1 < size ) {
             left = 2*left+1;
         }
-        cout << "\n<DEAP>";
+        cout << "<DEAP>";
         cout << "\nbottom: [" << heap[size-1].no << "] " << heap[size-1].numOfStudent;
         cout << "\nleftmost bottom: [" << heap[left].no << "] " << heap[left].numOfStudent;
-
+        cout << endl;
     }
 };
 
@@ -371,14 +362,12 @@ int main() {
         maxHeap aMaxHeap;
         DEAP aDEAP;
 
-        cout << "\n 1Array version";
-
         cout << "\n**** Heap Construction *****"
                 "\n* 0. QUIT                  *"
                 "\n* 1. Build a max heap      *"
                 "\n* 2. Build a DEAP          *"
                 "\n****************************";
-        cout << "\nInput a choice(0, 1, 2):";
+        cout << "\nInput a choice(0, 1, 2): ";
         cin >> command;
         switch ( command ) {
             case 0:
