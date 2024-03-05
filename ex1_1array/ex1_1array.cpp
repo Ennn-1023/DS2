@@ -14,10 +14,20 @@ struct dataType {
     }
 };
 
+
 class inputFile {
 private:
     string fileID;
     vector<dataType> inputData;
+    int toInt(string str) {
+        int size = str.size();
+        int sum = 0;
+        for ( int i = 0; i < size; i++ ) {
+            if (isdigit(str[i]))
+                sum = sum*10 + str[i]-'0';
+        }
+        return sum;
+    }
 public:
     inputFile() {
         reset();
@@ -70,7 +80,7 @@ public:
                     pos = buf.find_first_of('\t', pre);
                     cut = buf.substr(pre, pos - pre);
                     if (++fNo == 7) {
-                        oneR.numOfStudent = atoi(cut.c_str());
+                        oneR.numOfStudent = toInt(cut);
                     }
                     pre = ++pos;
                 } while ((pos > 0) && (fNo < 7));
