@@ -39,6 +39,9 @@ public:
         fileID.clear();
         inputData.clear();
     }
+    bool isEmpty() {
+        return inputData.empty();
+    }
     vector<dataType> getList() {
         return inputData;
     }
@@ -95,6 +98,12 @@ class maxHeap {
 public:
     vector<dataType> list;
     maxHeap() {
+        list.clear();
+    }
+    ~maxHeap() {
+        list.clear();
+    }
+    void reset() {
         list.clear();
     }
     int empty() {
@@ -180,11 +189,11 @@ private:
             return false;
     }
 
-    void reHeap(int pos, bool side) {
+    int reHeapDown(int pos, bool side) {
         int left = 2*pos+1, right = left+1;
         int size = heap.size();
         if ( right > size ) // if right == heap.size(), left is available
-            return;
+            return pos;
 
         if (side) { // it is on the left side
             int min = pos;
@@ -195,7 +204,7 @@ private:
                 min = right;
             if (min != pos) {
                 swap(heap[min], heap[pos]);
-                reHeap(min, side);
+                return reHeapDown(min, side);
             }
         }
         else {
@@ -206,9 +215,10 @@ private:
                 max = right;
             if (max != pos) {
                 swap(heap[max], heap[pos]);
-                reHeap(max, side);
+                return reHeapDown(max, side);
             }
         }
+        return pos;
     }
     void reHeapUp(int pos, bool side) {
         // reHeap up from the parent of pos to the root of subtree at most
@@ -349,6 +359,40 @@ public:
         bool side = leftOrRight(newPos); // left side: true, right side: false
         reHeapUp(newPos, side);
     } // end of insert
+    dataType removeMax() {
+        int bottom = heap.size()-1;
+        dataType max;
+        if ( bottom == 1 ) {
+            max = heap[1];
+            heap.pop_back();
+        }
+        else {
+            swap(heap[2], heap[bottom]);
+            max = heap[bottom];
+            bottom-=1;
+            heap.pop_back();
+
+            int pos = 2;// the node on the root
+            pos = reHeapDown(pos, false); // get current position of the node
+            if ( pos*2+1 > bottom ) // if node is a leaf
+                exchange(pos); // check with correspond node
+        }
+        return max;
+    }
+    void getTop() {
+        vector<dataType> ansList;
+        int num;
+        cout << "\nEnter number[0-" << heap.size()-1 << "]: ";
+        cin >> num;
+        for ( int i = 0; i < num; i++ ) {
+            ansList.push_back(removeMax());
+        }
+
+        for (int i = 0; i<num; i++) {
+            cout << "\n[" << ansList[i].no << "] " << ansList[i].numOfStudent;
+        }
+    }
+
     void print() {
         int left = 1;
         int size = heap.size();
@@ -368,16 +412,16 @@ int main() {
     bool keepRun = true;
     int command = -1;
     // command = { 0: quit, 1: build a max heap, 2: build a DEAP }
-    while ( keepRun ) {
-        maxHeap aMaxHeap;
-        DEAP aDEAP;
+    maxHeap aMaxHeap;
+    DEAP aDEAP;
 
+    while ( keepRun ) {
         cout << "\n**** Heap Construction *****"
                 "\n* 0. QUIT                  *"
                 "\n* 1. Build a max heap      *"
                 "\n* 2. Build a DEAP          *"
                 "\n****************************";
-        cout << "\nInput a choice(0, 1, 2): ";
+        cout << "\nInput a choice(0, 1, 2, 3): ";
         cin >> command;
         switch ( command ) {
             case 0:
@@ -385,9 +429,10 @@ int main() {
                 break;
             case 1:
                 // check if the file had been read successfully
+                aFile.reset();
                 if ( !aFile.readFile() )
                     break;
-
+                aMaxHeap.reset();
                 // build head when the file being read successfully
                 aMaxHeap.build(aFile.getList());
 
@@ -395,16 +440,21 @@ int main() {
                 aMaxHeap.print();
                 break;
             case 2:
+                aFile.reset();
                 if ( !aFile.readFile() )
                     break;
-
+                aDEAP.reset();
                 aDEAP.build(aFile.getList());
                 aDEAP.print();
+                break;
+            case 3:
+                if (aFile.isEmpty())
+                    break;
+                aDEAP.getTop();
                 break;
             default:
                 cout << "\nCommand does not exist!";
                 break;
         }
-        aFile.reset();
     }
 }
