@@ -352,25 +352,24 @@ public:
         } // end of left side check
         else { // pos is on the right side (max-heap)
             // check its correspond node and the children of coNode
-
+            int max = pos;
             if (heap[coNode].sNum > heap[pos].sNum) {
-                swap(heap[coNode], heap[pos]);
-                return coNode;
+                max = coNode;
             }
             else { // check the children of coNode
                 int left = coNode * 2 + 1, right = left + 1; // children of coNode
-                int max = pos, size = heap.size();
+                int size = heap.size();
                 // get the largest one
                 if (left < size && heap[max].sNum < heap[left].sNum)
                     max = left;
                 if (right < size && heap[max].sNum < heap[right].sNum)
                     max = right;
 
-                // swap if needed
-                if (max != pos) {
-                    swap(heap[max], heap[pos]);
-                    return max;
-                }
+            }
+            // swap if needed
+            if (max != pos) {
+                swap(heap[max], heap[pos]);
+                return max;
             }
         } // end of right side check
 
@@ -404,8 +403,9 @@ public:
 
             int pos = 2;// the node on the root
             pos = reHeapDown(pos, false); // get current position of the node
-            if ( pos*2+1 > bottom ) // if node is a leaf
-                exchange(pos); // check with correspond node
+            exchange(pos); // check with correspond node
+            //if ( pos*2+1 > bottom ) // if node is a leaf
+                //exchange(pos); // check with correspond node
         }
         return max;
     }
