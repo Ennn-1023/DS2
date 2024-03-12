@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <iomanip>
 
 using namespace std;
 struct heapNode {
@@ -411,14 +412,17 @@ public:
     void getTop() {
         vector<dataType> ansList;
         int num;
-        cout << "\nEnter number[1-" << heap.size()-1 << "]: ";
+        int size = heap.size()-1;
+        cout << "\nEnter the value of K in [1," << heap.size()-1 << "]: ";
         cin >> num;
+        if (num > size)
+            return;
         for ( int i = 0; i < num; i++ ) {
             ansList.push_back(removeMax());
         }
         for (int i = 0; i < num; i++) {
-            cout << "\nTop  " << i+1 << ": [" << ansList[i].no << "] " << ansList[i].sName << "\t";
-            cout << ansList[i].dName << "\t" <<ansList[i].type << "\t" << ansList[i].degree << "\t" << ansList[i].sNum;
+            cout << "\nTop  " << setw(2) << i+1 << ": [" << ansList[i].no << "] " << ansList[i].sName;
+            cout << ansList[i].dName << ", " <<ansList[i].type << ", " << ansList[i].degree << ", " << ansList[i].sNum;
         }
 
     }
@@ -447,12 +451,12 @@ int main() {
 
     while ( keepRun ) {
 
-        cout << "\n**** Heap Construction *****"
-                "\n* 0. QUIT                  *"
-                "\n* 1. Build a max heap      *"
-                "\n* 2. Build a DEAP          *"
-                "\n* 3. Top k                 *"
-                "\n****************************";
+        cout << "\n**** Heap Construction ********"
+                "\n* 0. QUIT                     *"
+                "\n* 1. Build a max heap         *"
+                "\n* 2. Build a DEAP             *"
+                "\n* 3. Top-K maximums from DEAP *"
+                "\n*******************************";
         cout << "\nInput a choice(0, 1, 2, 3): ";
         cin >> command;
         switch ( command ) {
