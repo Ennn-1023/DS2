@@ -5,12 +5,25 @@
 #include <fstream>
 
 using namespace std;
-struct dataType {
+struct heapNode {
     int no;
     int numOfStudent;
-    dataType() {
+    heapNode() {
         no = 0;
         numOfStudent = 0;
+    }
+    heapNode(int n, int stuNum):no(n), numOfStudent(stuNum) {}
+};
+struct dataType {
+    int no;
+    string sName;
+    string dName;
+    string type;
+    string degree;
+    int sNum; // student nums
+    dataType() {
+        no = 0;
+        sNum = 0;
     }
 };
 
@@ -82,8 +95,24 @@ public:
                 do {
                     pos = buf.find_first_of('\t', pre);
                     cut = buf.substr(pre, pos - pre);
-                    if (++fNo == 7) {
-                        oneR.numOfStudent = toInt(cut);
+                    switch (++fNo) {
+                        case 2:
+                            oneR.sName = cut;
+                            break;
+                        case 4:
+                            oneR.dName = cut;
+                            break;
+                        case 5:
+                            oneR.type = cut;
+                            break;
+                        case 6:
+                            oneR.degree = cut;
+                            break;
+                        case 7:
+                            oneR.sNum = toInt(cut);
+                            break;
+                        default:
+                            break;
                     }
                     pre = ++pos;
                 } while ((pos > 0) && (fNo < 7));
@@ -96,7 +125,7 @@ public:
 
 class maxHeap {
 public:
-    vector<dataType> list;
+    vector<heapNode> list;
     maxHeap() {
         list.clear();
     }
@@ -134,13 +163,14 @@ public:
     void build( const vector<dataType>& dataList ) {
         int size = dataList.size();
         for ( int i = 0; i < size; i++ ) {
-            insert(dataList[i]);
+            insert(dataList[i].no, dataList[i].sNum);
         }
     }
-    void insert(dataType newItem) {
+    void insert(int no, int sNum) {
         // insert a new item at the bottom of heap
 
         int pos = list.size(); // bottom index( position of the new item )
+        heapNode newItem(no, sNum);
         list.push_back(newItem);
         int parent = (pos-1)/2;
         // reHeap up from its parent to root at most
@@ -198,9 +228,9 @@ private:
         if (side) { // it is on the left side
             int min = pos;
             // choose the minimum to be swapped
-            if (heap[left].numOfStudent < heap[min].numOfStudent)
+            if (heap[left].sNum < heap[min].sNum)
                 min = left;
-            if (right < size && heap[right].numOfStudent < heap[min].numOfStudent)
+            if (right < size && heap[right].sNum < heap[min].sNum)
                 min = right;
             if (min != pos) {
                 swap(heap[min], heap[pos]);
@@ -209,9 +239,9 @@ private:
         }
         else {
             int max = pos;
-            if (heap[left].numOfStudent > heap[max].numOfStudent)
+            if (heap[left].sNum > heap[max].sNum)
                 max = left;
-            if (right < size && heap[right].numOfStudent > heap[max].numOfStudent)
+            if (right < size && heap[right].sNum > heap[max].sNum)
                 max = right;
             if (max != pos) {
                 swap(heap[max], heap[pos]);
@@ -224,14 +254,14 @@ private:
         // reHeap up from the parent of pos to the root of subtree at most
         int parent = (pos-1)/2;
         if (side) { // min heap
-            while (parent > 0 && heap[parent].numOfStudent > heap[pos].numOfStudent) {
+            while (parent > 0 && heap[parent].sNum > heap[pos].sNum) {
                 swap(heap[parent], heap[pos]);
                 pos = parent;
                 parent = (pos-1)/2;
             }
         }
         else {
-            while (parent > 0 && heap[parent].numOfStudent < heap[pos].numOfStudent) {
+            while (parent > 0 && heap[parent].sNum < heap[pos].sNum) {
                 swap(heap[parent], heap[pos]);
                 pos = parent;
                 parent = (pos-1)/2;
@@ -306,14 +336,14 @@ public:
         if (side) {
             // case1 correspond position available
             if (coNode < heap.size()) {
-                if (heap[coNode].numOfStudent < heap[pos].numOfStudent) {
+                if (heap[coNode].sNum < heap[pos].sNum) {
                     swap(heap[coNode], heap[pos]);
                     return coNode;
                 }
             } // end of case1
             else { // case2 correspond node does not exist but its parent does
                 int parent =  (coNode-1)/2; // parent of coNode
-                if (parent > 0 && heap[parent].numOfStudent < heap[pos].numOfStudent) {
+                if (parent > 0 && heap[parent].sNum < heap[pos].sNum) {
                     swap(heap[parent], heap[pos]);
                     return parent;
                 }
@@ -322,7 +352,7 @@ public:
         else { // pos is on the right side (max-heap)
             // check its correspond node and the children of coNode
 
-            if (heap[coNode].numOfStudent > heap[pos].numOfStudent) {
+            if (heap[coNode].sNum > heap[pos].sNum) {
                 swap(heap[coNode], heap[pos]);
                 return coNode;
             }
@@ -330,9 +360,9 @@ public:
                 int left = coNode * 2 + 1, right = left + 1; // children of coNode
                 int max = pos, size = heap.size();
                 // get the largest one
-                if (left < size && heap[max].numOfStudent < heap[left].numOfStudent)
+                if (left < size && heap[max].sNum < heap[left].sNum)
                     max = left;
-                if (right < size && heap[max].numOfStudent < heap[right].numOfStudent)
+                if (right < size && heap[max].sNum < heap[right].sNum)
                     max = right;
 
                 // swap if needed
@@ -347,7 +377,6 @@ public:
     }
     void insert(const dataType& newItem) {
         int pos = heap.size(); // position of the newItem at which is inserted
-
         // append newItem on the bottom
         heap.push_back(newItem);
 
@@ -382,15 +411,16 @@ public:
     void getTop() {
         vector<dataType> ansList;
         int num;
-        cout << "\nEnter number[0-" << heap.size()-1 << "]: ";
+        cout << "\nEnter number[1-" << heap.size()-1 << "]: ";
         cin >> num;
         for ( int i = 0; i < num; i++ ) {
             ansList.push_back(removeMax());
         }
-
-        for (int i = 0; i<num; i++) {
-            cout << "\n[" << ansList[i].no << "] " << ansList[i].numOfStudent;
+        for (int i = 0; i < num; i++) {
+            cout << "\nTop  " << i+1 << ": [" << ansList[i].no << "] " << ansList[i].sName << "\t";
+            cout << ansList[i].dName << "\t" <<ansList[i].type << "\t" << ansList[i].degree << "\t" << ansList[i].sNum;
         }
+
     }
 
     void print() {
@@ -400,8 +430,8 @@ public:
             left = 2*left+1;
         }
         cout << "<DEAP>";
-        cout << "\nbottom: [" << heap[size-1].no << "] " << heap[size-1].numOfStudent;
-        cout << "\nleftmost bottom: [" << heap[left].no << "] " << heap[left].numOfStudent;
+        cout << "\nbottom: [" << heap[size-1].no << "] " << heap[size-1].sNum;
+        cout << "\nleftmost bottom: [" << heap[left].no << "] " << heap[left].sNum;
         cout << endl;
     }
 };
@@ -416,6 +446,7 @@ int main() {
     DEAP aDEAP;
 
     while ( keepRun ) {
+
         cout << "\n**** Heap Construction *****"
                 "\n* 0. QUIT                  *"
                 "\n* 1. Build a max heap      *"
