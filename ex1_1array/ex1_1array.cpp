@@ -451,6 +451,7 @@ int main() {
                 "\n* 0. QUIT                  *"
                 "\n* 1. Build a max heap      *"
                 "\n* 2. Build a DEAP          *"
+                "\n* 3. Top k                 *"
                 "\n****************************";
         cout << "\nInput a choice(0, 1, 2, 3): ";
         cin >> command;
