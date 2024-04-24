@@ -150,19 +150,100 @@ public:
     }
 };
 
+
+
 class HashTable {
 private:
-    int hash(int key) {
+    struct HashItemType {
+        string sID; // key
+        string sName;
+        int avgScore = 0;
+        int hashValue = 0;
+        HashItemType() = default;
+        HashItemType(const DataType& data):sID(data.sID), sName(data.sName), avgScore(data.avgScore) {}
+    };
+    HashItemType *list;
+    int size;
+    static bool isPrime(int num) {
+        // given a positive integer, check if there is any factor of num
+        // return true when no factor been found
+        // otherwise, return false
+        if (num <= 1)
+            return false;
+        if (num < 4) // num == 2 or 3
+            return true;
+        else if (num % 2 == 0)
+            return false;
+        else {
+            for (int factor = 3; factor*factor <= num; factor+=2) { // check all odd integer between 2 and sqrt(num)
+                if (num % factor == 0)
+                    return false;
+            }
+            return true;
+        }
+    }
+    static int getNextPrime(int num) {
+        // get the next prime larger than num
+
+        int i = num+1; // only check number > num
+        if (i% 2 == 0) // is a even number
+            i++;
+        // only check the odd numbers
+        while(true) {
+            if (isPrime(i))
+                return i;
+        }
+    }
+
+    int hash(string& key) {
+        int value = 0;
+        for (char ch:key) {
+
+        }
+    }
+    void allocTable(int numOfData) {
+        // allocate memory space for hash table
+        // and set up data member: size.
+        this->size = getNextPrime(numOfData*1.15);
+        list = new HashItemType[this->size];
+    }
+public:
+    HashTable() {
+        size = 0;
+        list = NULL;
+    }
+    ~HashTable() {
+        delete[] list;
+    }
+
+    void reset() {
+        delete [] list;
+        size = 0;
+    }
+
+    void build(const vector<DataType>& inputList) {
+        // allocate memory space
+        allocTable(inputList.size());
+        // insert one by one
+        for (auto data:inputList) {
+            insert(data);
+        }
+    }
+    void insert(const DataType& item) {
+        HashItemType value(item);
+        value.hashValue = hash(value.sID); // set up hash value of the new item
 
     }
 };
 
+
 int main() {
-    // read txt
+
     inputFile aFile;
     bool keepRun = true;
     int command = -1;
-    // command = { 0: quit, 1: build a max heap, 2: build a DEAP }
+    HashTable quadraticTable;
+
     while ( keepRun ) {
         cout << "\n******* Hash Table *****"
                 "\n* 0. QUIT              *"
@@ -180,7 +261,7 @@ int main() {
                 if ( !aFile.readFile()) {
                     break;
                 }
-
+                quadraticTable.build(aFile.getList());
                 // aFile.printAll();
 
                 break;
