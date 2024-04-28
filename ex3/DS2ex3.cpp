@@ -2,13 +2,23 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include <cstring> // using strcpy()
+#include <cstring> // strcpy()
+#include <iomanip> // std::setprecision()
 using namespace std;
-struct DataType {
+struct DataType { // input data type
     char sID[10] = {0}; // student id
     char sName[10]; // student name
     unsigned char score[6] = {0}; // six different scores
     float avgScore = 0.0; // average score
+};
+struct HashItemType { // hash table item type
+    int hashValue = 0;
+    string sID; // key
+    string sName;
+    float avgScore = 0;
+    bool empty = true; // keep whether the space is empty
+    HashItemType() = default;
+    HashItemType(const DataType& data):sID(data.sID), sName(data.sName), avgScore(data.avgScore), empty(false) {}
 };
 
 class inputFile {
@@ -121,7 +131,6 @@ public:
             return true;
         }
     }
-
     bool readFile() {
         fstream inFile;
         this->reset();
@@ -148,22 +157,41 @@ public:
             cout << oneR.avgScore;
         }
     }
+
+    void writeTable(const vector<HashItemType>& list, const string& type) {
+        // type: quadratic or double
+        string fileName = type+fileID+".txt";
+        fstream file;
+        file.open(fileName.c_str(), fstream::out);
+        if (file.is_open()) { // write file
+            string oneRow;
+            if (type == "quadratic")
+                oneRow = "--- Hash table created by Quadratic probing ---";
+            else
+                oneRow = "--- Hash table created by Double hashing ---";
+            file << oneRow;
+            for (int i = 0; i < list.size(); i++) {
+                oneRow.clear();
+                if (list[i].empty) {
+                    file << endl << "[" << i << "] ";
+                }
+                else {
+                    file << endl << "[" << i << "] " << list[i].hashValue << ", " << list[i].sID << ", " << list[i].sName;
+                    file << ", " << list[i].avgScore;
+                }
+            }
+        }
+    }
 };
 
-
-
-class HashTable {
+class QuadraticHash {
 private:
-    struct HashItemType {
-        string sID; // key
-        string sName;
-        int avgScore = 0;
-        int hashValue = 0;
-        HashItemType() = default;
-        HashItemType(const DataType& data):sID(data.sID), sName(data.sName), avgScore(data.avgScore) {}
-    };
-    HashItemType *list;
+    // data members
+    vector<HashItemType> list;
     int size;
+    int successNum;
+    int unsuccessNum;
+    // private member function
     static bool isPrime(int num) {
         // given a positive integer, check if there is any factor of num
         // return true when no factor been found
@@ -192,33 +220,46 @@ private:
         while(true) {
             if (isPrime(i))
                 return i;
+            else
+                i+=2;
         }
     }
 
     int hash(string& key) {
-        int value = 0;
-        for (char ch:key) {
-
+        long long value = 1;
+        for (char ch:key) { // times each char together
+            value *= ch;
         }
+        return value%this->size;
     }
+    int step(int times) {
+        // according to the step times to return how much step should be done
+        // when time = 1, return 1
+        return times*times;
+    }
+
     void allocTable(int numOfData) {
         // allocate memory space for hash table
         // and set up data member: size.
         this->size = getNextPrime(numOfData*1.15);
-        list = new HashItemType[this->size];
+        list.resize(this->size);
     }
 public:
-    HashTable() {
+    QuadraticHash() {
         size = 0;
-        list = NULL;
+        list.clear();
+        successNum = 0;
+        unsuccessNum = 0;
     }
-    ~HashTable() {
-        delete[] list;
+    ~QuadraticHash() {
+        list.clear();
     }
 
     void reset() {
-        delete [] list;
+        list.clear();
         size = 0;
+        successNum = 0;
+        unsuccessNum = 0;
     }
 
     void build(const vector<DataType>& inputList) {
@@ -228,11 +269,54 @@ public:
         for (auto data:inputList) {
             insert(data);
         }
+        cout << endl << "Hash table has been successfully created by Quadratic probing";
     }
     void insert(const DataType& item) {
+        // insert item into hash table by using sID as key
+        // add up total search time which the successful searches will cost
         HashItemType value(item);
         value.hashValue = hash(value.sID); // set up hash value of the new item
 
+        int stepTimes = 0;
+        unsigned int loc = value.hashValue;
+        // find a empty location by quadratic probing
+        while (!list[loc].empty) {
+            stepTimes++; // move to next location
+            loc = value.hashValue + step(stepTimes); // loc added by a quadratic number
+            loc %= this->size;
+        } // end of probing
+        // set up success search times
+        this->successNum += stepTimes+1;
+        // put into the list
+        list[loc] = value;
+    }
+    vector<HashItemType> outputTable() {
+        return list;
+    }
+    void nonexistSearch() {
+        // simulate how many probing is needed totally
+        // set up the total search time
+        // simulation of each hash value does not exist in the table
+        for (int hValue = 0; hValue < this->size; hValue++) {
+            int times = 0; // how many probing occur during retrieving one value
+            int loc = hValue;
+            while (!list[loc].empty) {
+                times++;
+                loc = hValue + step(times);
+                loc %= this->size;
+            }
+            this->unsuccessNum += times;
+        } // end of simulate
+    }
+    void mission1Print(int dataNum) {
+        float avgSuccess, avgUnsuccess;
+        nonexistSearch();
+        avgUnsuccess = (float)unsuccessNum/ this->size;
+        avgSuccess = (float)successNum / dataNum;
+        cout << endl << std::fixed << std::setprecision(4) << "unsuccessful search: ";
+        cout << avgUnsuccess << " comparisons on average";
+        cout << endl << "successful search: " << avgSuccess << " comparisons on average";
+        cout << endl;
     }
 };
 
@@ -242,7 +326,7 @@ int main() {
     inputFile aFile;
     bool keepRun = true;
     int command = -1;
-    HashTable quadraticTable;
+    QuadraticHash quadraticTable;
 
     while ( keepRun ) {
         cout << "\n******* Hash Table *****"
@@ -257,21 +341,26 @@ int main() {
                 keepRun = false;
                 break;
             case 1:
-                // check if the file had been read successfully
+                // read file first
+                aFile.reset();
                 if ( !aFile.readFile()) {
                     break;
                 }
+                quadraticTable.reset();
                 quadraticTable.build(aFile.getList());
-                // aFile.printAll();
-
+                aFile.writeTable(quadraticTable.outputTable(), "quadratic");
+                quadraticTable.mission1Print(aFile.getList().size());
                 break;
             case 2:
-
-
+                // check if the file had been read successfully
+                if (aFile.isEmpty()) {
+                    cout << "### Command 1 first. ###\n";
+                }
                 break;
             default:
                 cout << "\nCommand does not exist!";
                 break;
-        }
+        } // end of switch
+
     }
 }
