@@ -6,6 +6,7 @@
 #include <iomanip> // setw()
 #include <algorithm> // sort()
 #include <queue>
+#include <unordered_map>
 
 using namespace std;
 struct DataType { // input data type
@@ -258,9 +259,8 @@ class adjList { // ¬Û¾F¦ê¦C
 class DirectGraph {
 private:
     // data member
-    vector<vector<Node>> adjList;
+    unordered_map<int, vector<int>> adjList;
     vector<pair<int, vector<int>>> connectedList;
-
 
 public:
     DirectGraph() {
@@ -272,15 +272,21 @@ public:
         if (inputList.size() == 0) {
             return false;
         }
-        else {
-            adjList = inputList;
+        else { // setting
+            for (auto row : inputList) {
+                vector<int> temp;
+                for (int i = 1; i < row.size(); i++) {
+                    temp.push_back(row[i].id);
+                }
+                adjList[row[0].id] = temp;
+            }
             return true;
         }
-    }
+    } // 4106034
+    //   10027127
     void computeBFS() {
-        for (auto list:adjList) {
-            vector<int> temp = findBFS(list[0].id);
-            connectedList.emplace_back(pair( list[0].id, temp));
+        for (auto list = adjList.begin(); list != adjList.end(); list++) {
+            connectedList.emplace_back(list->first, findBFS(list->first));
         }
         sort(connectedList.begin(), connectedList.end(), compareBySize);
     }
@@ -288,30 +294,23 @@ public:
         queue<int> aQueue;
         aQueue.push(sID);
         vector<int> visitedList;
-        // visitedList.push_back(sID);
+        // visitedList_ptr.push_back(sID);
         while (!aQueue.empty()) {
             int curNode = aQueue.front(); // get front
-            vector<Node> adjNodes = findAdjList(curNode);
+            vector<int> adjNodes = adjList.at(curNode);
             aQueue.pop();
-            for (int idx = 1; idx < adjNodes.size(); idx++ ) { // check every node which is adjacent to curNode;
-                auto iter = find(visitedList.begin(), visitedList.end(), adjNodes[idx].id);
-                if ( visitedList.end() == iter && adjNodes[idx].id != sID ) {
-                    // not found in visitedList
-                    aQueue.push(adjNodes[idx].id); // enqueue
-                    visitedList.push_back(adjNodes[idx].id);
+            for (int idx = 0; idx < adjNodes.size(); idx++ ) { // check every node which is adjacent to curNode;
+                auto iter = find(visitedList.begin(), visitedList.end(), adjNodes[idx]);
+                if (visitedList.end() == iter && adjNodes[idx] != sID ) {
+                    // not found in visitedList_ptr
+                    aQueue.push(adjNodes[idx]); // enqueue
+                    visitedList.push_back(adjNodes[idx]);
                 }
             }
         }
 
         sort(visitedList.begin(), visitedList.end(), sortNode);
         return visitedList;
-    }
-    vector<Node> findAdjList(int sID) {
-        for (vector<Node> row : adjList) {
-            if ( row[0].id == sID )
-                return row;
-        }
-        return {};
     }
     void reset() {
         connectedList.clear();
@@ -321,12 +320,17 @@ public:
     }
     // comparator
     static bool compareBySize(const pair<int, vector<int>>& n1, const pair<int, vector<int>>& n2) {
-        if (n1.second.size() == n2.second.size())
-            return n1.first < n2.first;
+        if (n1.second.size() == n2.second.size()) { // order by sID ascii
+            string s1 = to_string(n1.first);
+            string s2 = to_string(n2.first);
+            return s1 < s2;
+        }
         else
             return n1.second.size() > n2.second.size();
     }
-    static bool sortNode(int s1, int s2) {
+    static bool sortNode(int id1, int id2) {
+        string s1 = to_string(id1);
+        string s2 = to_string(id2);
         return s1 < s2;
     }
 };
