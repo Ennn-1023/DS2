@@ -99,7 +99,7 @@ public:
             return true;
 		}
 	}
-    bool writeFile2(const vector<pair<int, vector<int>>>& cntList, int idnum) { // 寫檔
+    bool writeFile2(const vector<pair<string, vector<string>>>& cntList, int idnum) { // 寫檔
         ofstream outFile;
         outFile.open("pairs" + fileID + ".cnt");
         if (!outFile) {
@@ -109,15 +109,16 @@ public:
         }
         else {
             outFile << "<<< There are " << idnum << " IDs in total. >>>\n";
-
+            int width = to_string(cntList.size()).length();
             for (int i = 0; i < cntList.size(); i++) {
                 int connect = cntList[i].second.size();
-                outFile << "[ " << i+1 << "] " << cntList[i].first << "(" << connect << "):";
-                int j = 0, k = 0;
-                for ( ; j < cntList[i].second.size(); j++, k++, k%=12) {
-                    if (k == 0)
+                outFile << "[" << setw(3) << i+1 << "] " << cntList[i].first << "(" << connect << "): \n";
+                int j = 0;
+                for (auto node : cntList[i].second) {
+                    outFile << "\t(" << setw(2) << j+1 <<") " << node;
+                    if ((j+1) % 12 == 0)
                         outFile << "\n";
-                    outFile << " (" << setw(2) << j+1 << ") " << cntList[i].second[j];
+                    j++;
                 }
                 outFile << "\n";
             }
@@ -135,7 +136,7 @@ class adjList { // 相鄰串列
 		int idnum = 0; // 相異學號總數 
 		int nodenum = 0; // 總節點數(不包括主陣列) 
 	
-		vector<int> getOnlyID(vector<DataType> list) { // 取得只有收訊的所有學號 
+		vector<int> getOnlyID(const vector<DataType>& list) { // 取得只有收訊的所有學號
 			bool getOnly;
 			vector<int> temp;
 			temp.resize(0);
@@ -238,7 +239,7 @@ class adjList { // 相鄰串列
 			return idnum;
 		}
 		
-		vector<vector<Node> > getList() { // 取得相鄰串列 
+		vector<vector<Node>>& getList() { // 取得相鄰串列
 			return mainList;
 		}
 		
@@ -259,14 +260,15 @@ class adjList { // 相鄰串列
 class DirectGraph {
 private:
     // data member
-    unordered_map<int, vector<int>> adjList;
-    vector<pair<int, vector<int>>> connectedList;
+    unordered_map<string, vector<string>> adjList;
+    vector<pair<string, vector<string>>> connectedList;
 
 public:
     DirectGraph() {
     }
     ~DirectGraph() {
         adjList.clear();
+        connectedList.clear();
     }
     bool setList(const vector<vector<Node>>& inputList) {
         if (inputList.size() == 0) {
@@ -274,64 +276,65 @@ public:
         }
         else { // setting
             for (auto row : inputList) {
-                vector<int> temp;
+                vector<string> temp;
                 for (int i = 1; i < row.size(); i++) {
-                    temp.push_back(row[i].id);
+                    temp.push_back(to_string(row[i].id));
                 }
-                adjList[row[0].id] = temp;
+                adjList[to_string(row[0].id)] = temp; // insert into map
             }
             return true;
         }
-    } // 4106034
-    //   10027127
+    }
     void computeBFS() {
-        for (auto list = adjList.begin(); list != adjList.end(); list++) {
-            connectedList.emplace_back(list->first, findBFS(list->first));
+        // compute the connection of each node one by one
+        for (auto &list: adjList) {
+            connectedList.emplace_back(list.first, findBFS(list.first));
         }
+
         sort(connectedList.begin(), connectedList.end(), compareBySize);
     }
-    vector<int> findBFS(int sID) {
-        queue<int> aQueue;
+    vector<string> findBFS(const string& sID) {
+        queue<string> aQueue;
         aQueue.push(sID);
-        vector<int> visitedList;
-        // visitedList_ptr.push_back(sID);
+        vector<string> returnList; //store the return visited node
+        unordered_map<string, int> visitedList; // record visited node
+        visitedList[sID] = 1;
         while (!aQueue.empty()) {
-            int curNode = aQueue.front(); // get front
-            vector<int> adjNodes = adjList.at(curNode);
+            string curNode = aQueue.front(); // get front
+            vector<string> adjNodes = adjList[curNode];
             aQueue.pop();
-            for (int idx = 0; idx < adjNodes.size(); idx++ ) { // check every node which is adjacent to curNode;
-                auto iter = find(visitedList.begin(), visitedList.end(), adjNodes[idx]);
-                if (visitedList.end() == iter && adjNodes[idx] != sID ) {
-                    // not found in visitedList_ptr
-                    aQueue.push(adjNodes[idx]); // enqueue
-                    visitedList.push_back(adjNodes[idx]);
+            for (string adjNode : adjNodes) { // check every node which is adjacent to curNode;
+
+                if ( visitedList[adjNode] != 1 ) {
+                    // not found in visitedList
+                    aQueue.push(adjNode); // enqueue
+                    visitedList[adjNode] = 1;
+                    returnList.emplace_back(adjNode); // sort when each insert
                 }
             }
         }
 
-        sort(visitedList.begin(), visitedList.end(), sortNode);
-        return visitedList;
+        sort(returnList.begin(), returnList.end(), sortNode);
+        return returnList;
     }
     void reset() {
         connectedList.clear();
+        adjList.clear();
     }
-    vector<pair<int, vector<int>>> getList() {
+    vector<pair<string, vector<string>>>& getList() {
         return connectedList;
     }
     // comparator
-    static bool compareBySize(const pair<int, vector<int>>& n1, const pair<int, vector<int>>& n2) {
-        if (n1.second.size() == n2.second.size()) { // order by sID ascii
-            string s1 = to_string(n1.first);
-            string s2 = to_string(n2.first);
-            return s1 < s2;
+    static bool compareBySize(const pair<string, vector<string>>& n1, const pair<string, vector<string>>& n2) {
+        int n1Size = n1.second.size(), n2Size = n2.second.size();
+        if (n1Size == n2Size) { // order by sID ascii
+            return n1.first < n2.first ;
         }
-        else
-            return n1.second.size() > n2.second.size();
+        else // order by num of connection
+            return n1Size > n2Size;
     }
-    static bool sortNode(int id1, int id2) {
-        string s1 = to_string(id1);
-        string s2 = to_string(id2);
-        return s1 < s2;
+    static bool sortNode(const string& id1, const string& id2) {
+        return id1 < id2;
     }
 };
 
@@ -370,13 +373,13 @@ int main() {
                 aGraph.reset();
                 // check adjList existence first
                 if (!aGraph.setList(aList.getList())) {
-                    cout << "\n### There is no graph and choose 1 first. ###";
+                    cout << "\n### There is no graph and choose 1 first. ###\n";
                     break;
                 }
                 // compute
                 aGraph.computeBFS();
-                aFile.writeFile2(aGraph.getList(), aList.getIdNum());
                 cout << "\n<<< There are " << aList.getIdNum() << " IDs in total. >>>\n";
+                aFile.writeFile2(aGraph.getList(), aList.getIdNum());
             	break;
             default:
                 cout << "\nCommand does not exist!";
