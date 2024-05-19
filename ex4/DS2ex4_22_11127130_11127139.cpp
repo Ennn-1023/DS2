@@ -306,7 +306,7 @@ public:
                     // not found in visitedList
                     aQueue.push(adjNode); // enqueue
                     visitedList[adjNode] = 1;
-                    returnList.emplace_back(adjNode); // sort when each insert
+                    returnList.emplace_back(adjNode);
                 }
             }
         }
