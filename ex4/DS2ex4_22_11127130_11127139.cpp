@@ -21,6 +21,7 @@ struct Node { // 相鄰串列節點
     string id = ""; // 學號
     float weight = 0.0; // 權重
     float threshold = 0.0;
+    bool done = false;
 };
 
 class File {
@@ -119,6 +120,34 @@ public:
                 outFile << "[" << setw(3) << i+1 << "] " << cntList[i].first << "(" << connect << "): \n";
                 int j = 0;
                 for (auto node : cntList[i].second) {
+                    outFile << "\t(" << setw(2) << j+1 <<") " << node.id;
+                    if ((j+1) % 12 == 0)
+                        outFile << "\n";
+                    j++;
+                }
+                outFile << "\n";
+            }
+
+            outFile.close();
+            return true;
+        }
+    }
+    bool writeFile3(const vector<pair<string, vector<Node>>>& infList) { // 寫檔
+        ofstream outFile;
+        outFile.open("pairs" + fileID + ".inf");
+        if (!outFile) {
+            cout << "寫入失敗\n";
+            outFile.close();
+            return false;
+        }
+        else {
+            outFile << "<<< There are " << infList.size() << " IDs in total. >>>\n";
+            int width = to_string(infList.size()).length();
+            for (int i = 0; i < infList.size(); i++) {
+                int connect = infList[i].second.size();
+                outFile << "[" << setw(3) << i+1 << "] " << infList[i].first << "(" << connect << "): \n";
+                int j = 0;
+                for (auto node : infList[i].second) {
                     outFile << "\t(" << setw(2) << j+1 <<") " << node.id;
                     if ((j+1) % 12 == 0)
                         outFile << "\n";
@@ -288,7 +317,7 @@ public:
 class DirectGraph {
 protected:
     // data member
-    unordered_map<string, vector<Node>> adjList;
+    unordered_map<string, pair<bool, vector<Node>>> adjList;
     vector<pair<string, vector<Node>>> connectedList;
 
 public:
@@ -308,7 +337,7 @@ public:
                 for (int i = 1; i < row.size(); i++) {
                     temp.push_back(row[i]);
                 }
-                adjList[row[0].id] = temp; // insert into map
+                adjList[row[0].id] = pair(false, temp); // insert into map
             }
             return true;
         }
@@ -329,7 +358,7 @@ public:
         visitedList[sID] = 1;
         while (!aQueue.empty()) {
             string curNode = aQueue.front(); // get front
-            vector<Node> adjNodes = adjList[curNode];
+            vector<Node> adjNodes = adjList[curNode].second;
             aQueue.pop();
             for (Node adjNode : adjNodes) { // check every node which is adjacent to curNode;
 
@@ -345,7 +374,49 @@ public:
         sort(returnList.begin(), returnList.end(), sortNode);
         return returnList;
     }
+    void computeDFS(float th) {
+        // compute the connection of each node one by one
+        for (auto &list: adjList) {
+            if (list.second.second.size() > 0) {
+                vector<Node> infList = findDFS(list.first, th);
+                if (infList.size() != 0)
+                    connectedList.emplace_back(list.first, infList);
+            }
+        }
 
+        sort(connectedList.begin(), connectedList.end(), compareBySize);
+    }
+    vector<Node> findDFS(const string& sID, float th) {
+        stack<string> aStack;
+        aStack.push(sID);
+        vector<Node> returnList; //store the return visited node
+        unordered_map<string, int> visitedList; // record visited node
+        visitedList[sID] = 1;
+        while (!aStack.empty()) {
+            string curNode = aStack.top(); // get front
+            vector<Node> adjNodes = adjList[curNode].second;
+            Node adjNode;
+            bool allVisited = true;
+            for (int i = 0; i < adjNodes.size(); i++) {
+                if (visitedList[adjNodes[i].id] != 1 && adjNodes[i].weight >= th) {
+                    adjNode = adjNodes[i];
+                    allVisited = false;
+                    break;
+                }
+            }
+            if (!allVisited) {
+                aStack.push(adjNode.id);
+                visitedList[adjNode.id] = 1;
+                returnList.emplace_back(adjNode);
+            }
+            else {
+                aStack.pop();
+            }
+        }
+        if (returnList.size() > 0)
+            sort(returnList.begin(), returnList.end(), sortNode);
+        return returnList;
+    }
     void reset() {
         connectedList.clear();
         adjList.clear();
@@ -368,9 +439,9 @@ public:
 
 };
 
+
 class WeightedGraph : public DirectGraph {
 private:
-
     unordered_map<string, vector<Node>> connectedMap;
 public:
     void reset() {
@@ -383,6 +454,7 @@ public:
             auto temp = findBFS(row.first);
             connectedMap[row.first] = temp;
             connectedList.emplace_back(row.first, temp);
+            adjList[row.first].first = true;
         }
         sort(connectedList.begin(), connectedList.end(), compareBySize);
     }
@@ -395,18 +467,25 @@ public:
         else
             return false;
     }
-    /*
+
     vector<Node> findBFS(const string& sID) {
         queue<string> aQueue;
         aQueue.push(sID);
         vector<Node> returnList; // store the return visited node
+        unordered_map<string, int> doneList;
         unordered_map<string, int> visitedMap; // record visited node
         visitedMap[sID] = 1;
         while (!aQueue.empty()) {
             string curNode = aQueue.front(); // get front
-            vector<Node> adjNodes = adjList[curNode];
-            for (auto& adjNode:adjNodes) {
-                if (visitedMap[adjNode.id] != 1 ) { // check
+            vector<Node> adjNodes = adjList[curNode].second;
+            aQueue.pop();
+            // check the connected node of curNode is been added or not
+            if (doneList[curNode] == 1)
+                continue; // skip this node;
+            // check each adjacent node
+            for (auto &adjNode: adjNodes) {
+                // check if the node had been visited
+                if (visitedMap[adjNode.id] != 1 && !adjList[adjNode.id].first) {
                     setThreshold(curNode, adjNode);
                     // check if the weight is not less than threshold
                     if (adjNode.weight >= adjNode.threshold) {
@@ -416,6 +495,7 @@ public:
                             vector<Node> tmp = connectedMap[adjNode.id];
                             for (auto node: tmp) {
                                 visitedMap[node.id] = 1;
+                                doneList[node.id] = 1;
                                 returnList.emplace_back(node);
                             }
                         } else { // this node have not been visited yet
@@ -424,34 +504,43 @@ public:
                             returnList.emplace_back(adjNode);
                         }
                     }
+
                     visitedMap[adjNode.id] = 1; // mark as visited
                 }
             }
+            doneList[curNode] = 1;
+        }
+
+        sort(returnList.begin(), returnList.end(), sortNode);
+        return returnList;
+    }
+
+    /*
+    vector<Node> findDFS(const string& sID) {
+        stack<string> aStack;
+        vector<Node> returnList; // store the return visited node
+        unordered_map<string, int> visitedMap; // record visited node
+        aStack.push(sID);
+        visitedMap[sID] = 1;
+        while (!aStack.empty()) {
+            string curNode = aStack.top(); // get front
+            auto adjNodes = adjList[curNode];
+            if (true) {
+
+            }
+            else {
+                aStack.pop();
+                if (connectedList.)
+            }
+
+
         }
 
         sort(returnList.begin(), returnList.end(), sortNode);
         return returnList;
     }
     */
-    /*
-    vector<Node> findDFS(const string& sID) {
-        stack<string> aStack;
-        aStack.push(sID);
-        vector<Node> returnList; // store the return visited node
-        unordered_map<string, int> visitedMap; // record visited node
-        visitedMap[sID] = 1;
-        while (!aStack.empty()) {
-            string curNode = aStack.top(); // get front
-            vector<Node> adjNodes = adjList[curNode];
-            if ( adjNodes.)
-            aStack.pop();
 
-        }
-
-        sort(returnList.begin(), returnList.end(), sortNode);
-        return returnList;
-    }
-     */
 
 };
 
@@ -460,7 +549,7 @@ class time_point;
 int main() {
     File aFile;
     adjList aList;
-    DirectGraph aGraph2;
+    DirectGraph aGraph;
     WeightedGraph aGraph4;
     bool keepRun = true;
     int command = -1;
@@ -494,19 +583,36 @@ int main() {
                 break;
             case 2:
                 // mission 2
-                aGraph2.reset();
+                aGraph.reset();
                 // check adjList existence first
-                if (!aGraph2.setList(aList.getList())) {
+                if (!aGraph.setList(aList.getList())) {
                     cout << "\n### There is no graph and choose 1 first. ###\n";
                     break;
                 }
+                start = clock(); // start time
                 // compute
-                aGraph2.computeBFS();
+                aGraph.computeBFS();
+                end = clock(); // end time
+                elapsed_time = double(end - start) / (CLOCKS_PER_SEC / 1000);
+                cout << "[Elapsed time] " << elapsed_time << " ms" << endl;
                 cout << "\n<<< There are " << aList.getIdNum() << " IDs in total. >>>\n";
-                aFile.writeFile2(aGraph2.getList(), aList.getIdNum());
+                aFile.writeFile2(aGraph.getList(), aList.getIdNum());
                 break;
             case 3:
+                aGraph.reset();
+                // check adjList existence first
+                if (!aGraph.setList(aList.getList())) {
+                    cout << "### There is no graph and choose 1 first. ###\n";
+                    break;
+                }
 
+                float th;
+                cout << endl << "Input a real number in [0.5,1]: ";
+                cin >> th;
+                // compute
+                aGraph.computeDFS(th);
+                cout << "\n<<< There are " << aGraph.getList().size() << " IDs in total. >>>\n";
+                aFile.writeFile3(aGraph.getList());
                 break;
             case 4:
                 aGraph4.reset();
