@@ -7,9 +7,10 @@
 #include <algorithm> // sort()
 #include <queue>
 #include <stack>
+#include <set>
 #include <unordered_map>
 #include <random>
-#include <ctime>
+#include <chrono>
 using namespace std;
 struct DataType { // input data type
     char putID[12] = {0}; // 發訊者學號 
@@ -18,10 +19,15 @@ struct DataType { // input data type
 };
 
 struct Node { // 相鄰串列節點 
-    string id = ""; // 學號
+    string id; // 學號
     float weight = 0.0; // 權重
     float threshold = 0.0;
-    bool done = false;
+    bool operator<(const Node& other) const {
+        return id < other.id;
+    }
+    bool operator>(const Node& other) const {
+        return id > other.id;
+    }
 };
 
 class File {
@@ -160,7 +166,7 @@ public:
             return true;
         }
     }
-    bool writeFile4(const vector<pair<string, vector<Node>>>& cntList, int idnum) { // 寫檔
+    bool writeFile4(const vector<pair<string, set<Node>>>& cntList, int idnum) { // 寫檔
         ofstream outFile;
         outFile.open("pairs" + fileID + ".txt");
         if (!outFile) {
@@ -317,7 +323,7 @@ public:
 class DirectGraph {
 protected:
     // data member
-    unordered_map<string, pair<bool, vector<Node>>> adjList;
+    unordered_map<string, vector<Node>> adjList;
     vector<pair<string, vector<Node>>> connectedList;
 
 public:
@@ -337,7 +343,7 @@ public:
                 for (int i = 1; i < row.size(); i++) {
                     temp.push_back(row[i]);
                 }
-                adjList[row[0].id] = pair(false, temp); // insert into map
+                adjList[row[0].id] = temp; // insert into map
             }
             return true;
         }
@@ -358,7 +364,7 @@ public:
         visitedList[sID] = 1;
         while (!aQueue.empty()) {
             string curNode = aQueue.front(); // get front
-            vector<Node> adjNodes = adjList[curNode].second;
+            vector<Node> adjNodes = adjList[curNode];
             aQueue.pop();
             for (Node adjNode : adjNodes) { // check every node which is adjacent to curNode;
 
@@ -376,17 +382,20 @@ public:
     }
     void computeDFS(float th) {
         // compute the connection of each node one by one
+        unordered_map<string, vector<Node>> searched; // 以某點做DFS後的結果
         for (auto &list: adjList) {
-            if (list.second.second.size() > 0) {
-                vector<Node> infList = findDFS(list.first, th);
-                if (infList.size() != 0)
+            if (list.second.size() > 0) {
+                vector<Node> infList = findDFS(list.first, th, searched);
+                if (infList.size() != 0) {
                     connectedList.emplace_back(list.first, infList);
+                    searched[list.first] = infList; // 把list.first的DFS結果加入searched
+                }
             }
         }
 
         sort(connectedList.begin(), connectedList.end(), compareBySize);
     }
-    vector<Node> findDFS(const string& sID, float th) {
+    vector<Node> findDFS(const string& sID, float th, unordered_map<string, vector<Node>> &searched) {
         stack<string> aStack;
         aStack.push(sID);
         vector<Node> returnList; //store the return visited node
@@ -394,27 +403,53 @@ public:
         visitedList[sID] = 1;
         while (!aStack.empty()) {
             string curNode = aStack.top(); // get front
-            vector<Node> adjNodes = adjList[curNode].second;
+            vector<Node> adjNodes = adjList[curNode];
             Node adjNode;
-            bool allVisited = true;
+            bool allVisited = true; //此節點的鄰居是否全部走過了
             for (int i = 0; i < adjNodes.size(); i++) {
-                if (visitedList[adjNodes[i].id] != 1 && adjNodes[i].weight >= th) {
+                if (visitedList[adjNodes[i].id] != 1 && adjNodes[i].weight >= th) { // 還沒走過而且走得過去
                     adjNode = adjNodes[i];
                     allVisited = false;
                     break;
                 }
             }
-            if (!allVisited) {
-                aStack.push(adjNode.id);
-                visitedList[adjNode.id] = 1;
-                returnList.emplace_back(adjNode);
+
+            if (!allVisited) { // 還有沒走過的鄰居
+                bool noVisited = true; // 此鄰居的深度搜索結果是否都未走過
+                if (searched[adjNode.id].size() > 1) {
+                    for (int i = 0; i < searched[adjNode.id].size(); i++) {
+                        if (visitedList[searched[adjNode.id][i].id] == 1) { // 此鄰居的深度搜索結果有走過的
+                            noVisited = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (noVisited) { // 此鄰居的深度搜索結果都未走過
+                    // 把此鄰居和它深度搜索結果加入returnList
+                    returnList.emplace_back(adjNode);
+                    returnList.insert(returnList.end(), searched[adjNode.id].begin(), searched[adjNode.id].end());
+
+                    // 把所有走過的點標示"走過了"
+                    visitedList[adjNode.id] = 1;
+                    for (int i = 0; i < searched[adjNode.id].size(); i++) {
+                        visitedList[searched[adjNode.id][i].id] = 1;
+                    }
+                }
+                else { // 此鄰居的深度搜索結果有走過的
+                    // 乖乖做深度搜索
+                    aStack.push(adjNode.id);
+                    visitedList[adjNode.id] = 1;
+                    returnList.emplace_back(adjNode);
+                }
             }
-            else {
-                aStack.pop();
-            }
+
+            aStack.pop();
         }
+
         if (returnList.size() > 0)
             sort(returnList.begin(), returnList.end(), sortNode);
+
         return returnList;
     }
     void reset() {
@@ -442,104 +477,170 @@ public:
 
 class WeightedGraph : public DirectGraph {
 private:
-    unordered_map<string, vector<Node>> connectedMap;
+    unordered_map<string, set<Node>> connectedMap;
+    unordered_map<string, set<Node>> doneList;
+    vector<pair<string, set<Node>>> connectedList;
 public:
     void reset() {
         connectedList.clear();
+        doneList.clear();
         DirectGraph::reset();
     }
-    void traverse() {
-        // set the get weight when first visit the edge
-        for (auto row : adjList) {
-            auto temp = findBFS(row.first);
-            connectedMap[row.first] = temp;
-            connectedList.emplace_back(row.first, temp);
-            adjList[row.first].first = true;
+    vector<pair<string, set<Node>>>& getList() {
+        return this->connectedList;
+    }
+    void getTopK() {
+        int total = this->connectedList.size();
+        int topK = 0;
+        cout << "Input an integer to show top-K in [1" << "," << total << "]: ";
+        cin >> topK;
+        // check range
+        while (topK < 1 || topK > total) {
+            cout << "\n###" << topK << " is NOT in [1," << total << "] ###";
+            cin >> topK;
         }
+
+        // print topK
+        for (int i = 0; i < topK; i++) {
+            cout << "\n<" << i+1 << "> " << this->connectedList[i].first << ": " << this->connectedList[i].second.size();
+        }
+    }
+    void traverse() {
+        // compute the connection of each node one by one
+        for (auto &row: adjList) {
+            if (row.second.size() > 0) {
+                set<Node> infList = findBFS(row.first);
+                if (infList.size() != 0) {
+                    connectedList.emplace_back(row.first, infList);
+                }
+                doneList[row.first] = infList;
+            }
+        }
+
         sort(connectedList.begin(), connectedList.end(), compareBySize);
     }
     bool setThreshold(const string& putID, Node& getID) {
-        if (getID.threshold == 0.0) { // if the valid gate weight have not been set up
+        if (getID.threshold > 0.5) // had been set up
+            return false;
+        else {
+            // if the valid gate weight have not been set up
             // set gate weight
+            srand(getID.weight* time(NULL));
             getID.threshold = 0.8 + static_cast<double>(rand()) / RAND_MAX * 0.2;
             return true;
         }
-        else
-            return false;
     }
 
-    vector<Node> findBFS(const string& sID) {
+    set<Node> findBFS(const string& sID) {
         queue<string> aQueue;
         aQueue.push(sID);
-        vector<Node> returnList; // store the return visited node
-        unordered_map<string, int> doneList;
+        set<Node> returnList; // store the return visited node
+
         unordered_map<string, int> visitedMap; // record visited node
         visitedMap[sID] = 1;
+        aQueue.push(sID);
         while (!aQueue.empty()) {
             string curNode = aQueue.front(); // get front
-            vector<Node> adjNodes = adjList[curNode].second;
             aQueue.pop();
-            // check the connected node of curNode is been added or not
-            if (doneList[curNode] == 1)
-                continue; // skip this node;
-            // check each adjacent node
-            for (auto &adjNode: adjNodes) {
-                // check if the node had been visited
-                if (visitedMap[adjNode.id] != 1 && !adjList[adjNode.id].first) {
-                    setThreshold(curNode, adjNode);
-                    // check if the weight is not less than threshold
-                    if (adjNode.weight >= adjNode.threshold) {
-                        // not found in visitedMap
-                        if (connectedMap.find(adjNode.id) != connectedMap.end()) { // had done before
-                            // get the deeper node by connectedList
-                            vector<Node> tmp = connectedMap[adjNode.id];
-                            for (auto node: tmp) {
-                                visitedMap[node.id] = 1;
-                                doneList[node.id] = 1;
-                                returnList.emplace_back(node);
-                            }
-                        } else { // this node have not been visited yet
-                            aQueue.push(adjNode.id); // enqueue
-                            visitedMap[adjNode.id] = 1;
-                            returnList.emplace_back(adjNode);
+            // check the connected node of curNode has been added or not
+            if (!doneList[curNode].empty()) // skip if visited
+                continue;
+            // check all adjacent nodes
+            for (auto& adjNode: adjList[curNode]) {
+                setThreshold(curNode, adjNode);
+                // check if the node is valid to be visited
+                if (visitedMap[adjNode.id] != 1 && adjNode.weight >= adjNode.threshold) {
+                    visitedMap[adjNode.id] = 1; // mark as visited
+                    if (!doneList[adjNode.id].empty()) {
+                        // copy from other list if it had done before
+                        for (auto node: doneList[adjNode.id]) {
+                            visitedMap[node.id] = 1;
+                            returnList.insert(node);
                         }
                     }
-
-                    visitedMap[adjNode.id] = 1; // mark as visited
+                    else { // have not been visited yet
+                        returnList.insert(adjNode);
+                        aQueue.push(adjNode.id);
+                    }
                 }
+                else // also mark as visited if weight is not enough
+                    visitedMap[adjNode.id] = 1;
             }
-            doneList[curNode] = 1;
         }
 
-        sort(returnList.begin(), returnList.end(), sortNode);
+        // sort(returnList.begin(), returnList.end(), sortNode);
         return returnList;
     }
 
-    /*
-    vector<Node> findDFS(const string& sID) {
+    // comparator
+    static bool compareBySize(const pair<string, set<Node>>& n1, const pair<string, set<Node>>& n2) {
+        int n1Size = n1.second.size(), n2Size = n2.second.size();
+        if (n1Size == n2Size) { // order by sID ascii
+            return n1.first < n2.first ;
+        }
+        else // order by num of connection
+            return n1Size > n2Size;
+    }
+
+    vector<Node> findDFS(const string& sID, unordered_map<string, vector<Node>> &searched) {
         stack<string> aStack;
-        vector<Node> returnList; // store the return visited node
-        unordered_map<string, int> visitedMap; // record visited node
         aStack.push(sID);
-        visitedMap[sID] = 1;
+        vector<Node> returnList; //store the return visited node
+        unordered_map<string, int> visitedList; // record visited node
+        visitedList[sID] = 1; // mark as visited
         while (!aStack.empty()) {
             string curNode = aStack.top(); // get front
-            auto adjNodes = adjList[curNode];
-            if (true) {
-
+            vector<Node> adjNodes = adjList[curNode];
+            Node adjNode;
+            bool allVisited = true; // 此節點的鄰居是否全部走過了
+            for (int i = 0; i < adjNodes.size(); i++) {
+                // set the threshold value randomly
+                setThreshold(curNode, adjNodes[i]);
+                if (visitedList[adjNodes[i].id] != 1 && adjNodes[i].weight >= adjNodes[i].threshold) { // 還沒走過而且走得過去
+                    adjNode = adjNodes[i];
+                    allVisited = false;
+                    break;
+                }
             }
-            else {
-                aStack.pop();
-                if (connectedList.)
+
+            if (!allVisited) { // 還有沒走過的鄰居
+                bool noVisited = true; // 此鄰居的深度搜索結果是否都未走過
+                if (searched[adjNode.id].size() > 1) {
+                    for (int i = 0; i < searched[adjNode.id].size(); i++) {
+                        if (visitedList[searched[adjNode.id][i].id] == 1) { // 此鄰居的深度搜索結果有走過的
+                            noVisited = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (noVisited) { // 此鄰居的深度搜索結果都未走過
+                    // 把此鄰居和它深度搜索結果加入returnList
+                    returnList.emplace_back(adjNode);
+                    returnList.insert(returnList.end(), searched[adjNode.id].begin(), searched[adjNode.id].end());
+
+                    // 把所有走過的點標示"走過了"
+                    visitedList[adjNode.id] = 1;
+                    for (int i = 0; i < searched[adjNode.id].size(); i++) {
+                        visitedList[searched[adjNode.id][i].id] = 1;
+                    }
+                }
+                else { // 此鄰居的深度搜索結果有走過的
+                    // 乖乖做深度搜索
+                    aStack.push(adjNode.id);
+                    visitedList[adjNode.id] = 1;
+                    returnList.emplace_back(adjNode);
+                }
             }
 
-
+            aStack.pop();
         }
 
-        sort(returnList.begin(), returnList.end(), sortNode);
+        if (returnList.size() > 0)
+            sort(returnList.begin(), returnList.end(), sortNode);
+
         return returnList;
     }
-    */
 
 
 };
@@ -554,17 +655,17 @@ int main() {
     bool keepRun = true;
     int command = -1;
     while ( keepRun ) {
-        cout << "**** Graph data manipulation *****\n"
-                "* 0. QUIT                        *\n"
-                "* 1. Build adjacency lists       *\n"
-                "* 2. Compute connection counts   *\n"
-                "* 3. Estimate influence values   *\n"
-                "* 4. Probability-based influence *\n"
-                "**********************************\n";
+        cout << "\n**** Graph data manipulation *****"
+                "\n* 0. QUIT                        *"
+                "\n* 1. Build adjacency lists       *"
+                "\n* 2. Compute connection counts   *"
+                "\n* 3. Estimate influence values   *"
+                "\n* 4. Probability-based influence *"
+                "\n**********************************";
         cout << "\nInput a choice(0, 1, 2, 3, 4): ";
         cin >> command;
-        clock_t start, end;
-        double elapsed_time;
+        chrono::time_point<chrono::system_clock> start, end;
+        chrono::milliseconds elapsed_time;
         switch ( command ) {
             case 0:
                 keepRun = false;
@@ -589,12 +690,9 @@ int main() {
                     cout << "\n### There is no graph and choose 1 first. ###\n";
                     break;
                 }
-                start = clock(); // start time
                 // compute
                 aGraph.computeBFS();
-                end = clock(); // end time
-                elapsed_time = double(end - start) / (CLOCKS_PER_SEC / 1000);
-                cout << "[Elapsed time] " << elapsed_time << " ms" << endl;
+
                 cout << "\n<<< There are " << aList.getIdNum() << " IDs in total. >>>\n";
                 aFile.writeFile2(aGraph.getList(), aList.getIdNum());
                 break;
@@ -621,13 +719,13 @@ int main() {
                     cout << "\n### There is no graph and choose 1 first. ###\n";
                     break;
                 }
-                start = clock(); // start time
+                start = chrono::system_clock::now(); // start time
                 // compute
                 aGraph4.traverse();
-                end = clock(); // end time
-                elapsed_time = double(end - start) / (CLOCKS_PER_SEC / 1000);
-                cout << "[Elapsed time] " << elapsed_time << " ms" << endl;
-                aFile.writeFile4(aGraph4.getList(), aList.getIdNum());
+                end = chrono::system_clock::now(); // end time
+                elapsed_time = chrono::duration_cast<chrono::milliseconds>(end - start);
+                cout << "[Elapsed time] " << elapsed_time.count() << " ms" << endl;
+                aGraph4.getTopK();
                 break;
             default:
                 cout << "\nCommand does not exist!";
