@@ -6,8 +6,10 @@
 #include <iomanip> // setw()
 #include <algorithm> // sort()
 #include <queue>
+#include <stack>
 #include <unordered_map>
-
+#include <random>
+#include <ctime>
 using namespace std;
 struct DataType { // input data type
     char putID[12] = {0}; // 發訊者學號 
@@ -16,8 +18,9 @@ struct DataType { // input data type
 };
 
 struct Node { // 相鄰串列節點 
-    string id; // 學號
-    float weight; // 權重
+    string id = ""; // 學號
+    float weight = 0.0; // 權重
+    float threshold = 0.0;
 };
 
 class File {
@@ -103,6 +106,34 @@ public:
     bool writeFile2(const vector<pair<string, vector<Node>>>& cntList, int idnum) { // 寫檔
         ofstream outFile;
         outFile.open("pairs" + fileID + ".cnt");
+        if (!outFile) {
+            cout << "寫入失敗\n";
+            outFile.close();
+            return false;
+        }
+        else {
+            outFile << "<<< There are " << idnum << " IDs in total. >>>\n";
+            int width = to_string(cntList.size()).length();
+            for (int i = 0; i < cntList.size(); i++) {
+                int connect = cntList[i].second.size();
+                outFile << "[" << setw(3) << i+1 << "] " << cntList[i].first << "(" << connect << "): \n";
+                int j = 0;
+                for (auto node : cntList[i].second) {
+                    outFile << "\t(" << setw(2) << j+1 <<") " << node.id;
+                    if ((j+1) % 12 == 0)
+                        outFile << "\n";
+                    j++;
+                }
+                outFile << "\n";
+            }
+
+            outFile.close();
+            return true;
+        }
+    }
+    bool writeFile4(const vector<pair<string, vector<Node>>>& cntList, int idnum) { // 寫檔
+        ofstream outFile;
+        outFile.open("pairs" + fileID + ".txt");
         if (!outFile) {
             cout << "寫入失敗\n";
             outFile.close();
@@ -255,7 +286,7 @@ public:
     }
 };
 class DirectGraph {
-private:
+protected:
     // data member
     unordered_map<string, vector<Node>> adjList;
     vector<pair<string, vector<Node>>> connectedList;
@@ -314,6 +345,7 @@ public:
         sort(returnList.begin(), returnList.end(), sortNode);
         return returnList;
     }
+
     void reset() {
         connectedList.clear();
         adjList.clear();
@@ -333,22 +365,117 @@ public:
     static bool sortNode(const Node& id1, const Node& id2) {
         return id1.id < id2.id;
     }
+
 };
+
+class WeightedGraph : public DirectGraph {
+private:
+
+    unordered_map<string, vector<Node>> connectedMap;
+public:
+    void reset() {
+        connectedList.clear();
+        DirectGraph::reset();
+    }
+    void traverse() {
+        // set the get weight when first visit the edge
+        for (auto row : adjList) {
+            auto temp = findBFS(row.first);
+            connectedMap[row.first] = temp;
+            connectedList.emplace_back(row.first, temp);
+        }
+        sort(connectedList.begin(), connectedList.end(), compareBySize);
+    }
+    bool setThreshold(const string& putID, Node& getID) {
+        if (getID.threshold == 0.0) { // if the valid gate weight have not been set up
+            // set gate weight
+            getID.threshold = 0.8 + static_cast<double>(rand()) / RAND_MAX * 0.2;
+            return true;
+        }
+        else
+            return false;
+    }
+    /*
+    vector<Node> findBFS(const string& sID) {
+        queue<string> aQueue;
+        aQueue.push(sID);
+        vector<Node> returnList; // store the return visited node
+        unordered_map<string, int> visitedMap; // record visited node
+        visitedMap[sID] = 1;
+        while (!aQueue.empty()) {
+            string curNode = aQueue.front(); // get front
+            vector<Node> adjNodes = adjList[curNode];
+            for (auto& adjNode:adjNodes) {
+                if (visitedMap[adjNode.id] != 1 ) { // check
+                    setThreshold(curNode, adjNode);
+                    // check if the weight is not less than threshold
+                    if (adjNode.weight >= adjNode.threshold) {
+                        // not found in visitedMap
+                        if (connectedMap.find(adjNode.id) != connectedMap.end()) { // had done before
+                            // get the deeper node by connectedList
+                            vector<Node> tmp = connectedMap[adjNode.id];
+                            for (auto node: tmp) {
+                                visitedMap[node.id] = 1;
+                                returnList.emplace_back(node);
+                            }
+                        } else { // this node have not been visited yet
+                            aQueue.push(adjNode.id); // enqueue
+                            visitedMap[adjNode.id] = 1;
+                            returnList.emplace_back(adjNode);
+                        }
+                    }
+                    visitedMap[adjNode.id] = 1; // mark as visited
+                }
+            }
+        }
+
+        sort(returnList.begin(), returnList.end(), sortNode);
+        return returnList;
+    }
+    */
+    /*
+    vector<Node> findDFS(const string& sID) {
+        stack<string> aStack;
+        aStack.push(sID);
+        vector<Node> returnList; // store the return visited node
+        unordered_map<string, int> visitedMap; // record visited node
+        visitedMap[sID] = 1;
+        while (!aStack.empty()) {
+            string curNode = aStack.top(); // get front
+            vector<Node> adjNodes = adjList[curNode];
+            if ( adjNodes.)
+            aStack.pop();
+
+        }
+
+        sort(returnList.begin(), returnList.end(), sortNode);
+        return returnList;
+    }
+     */
+
+};
+
+class time_point;
 
 int main() {
     File aFile;
     adjList aList;
-    DirectGraph aGraph;
+    DirectGraph aGraph2;
+    WeightedGraph aGraph4;
     bool keepRun = true;
     int command = -1;
     while ( keepRun ) {
-        cout << "\n**** Graph data manipulation *****"
-                "\n* 0. QUIT                        *"
-                "\n* 1. Build adjacency lists       *"
-                "\n* 2. Compute connection counts   *"
-                "\n**********************************";
-        cout << "\nInput a choice(0, 1, 2): ";
+        cout << "**** Graph data manipulation *****\n"
+                "* 0. QUIT                        *\n"
+                "* 1. Build adjacency lists       *\n"
+                "* 2. Compute connection counts   *\n"
+                "* 3. Estimate influence values   *\n"
+                "* 4. Probability-based influence *\n"
+                "**********************************\n";
+        cout << "\nInput a choice(0, 1, 2, 3, 4): ";
         cin >> command;
+        clock_t start, end;
+        double elapsed_time;
         switch ( command ) {
             case 0:
                 keepRun = false;
@@ -367,16 +494,34 @@ int main() {
                 break;
             case 2:
                 // mission 2
-                aGraph.reset();
+                aGraph2.reset();
                 // check adjList existence first
-                if (!aGraph.setList(aList.getList())) {
+                if (!aGraph2.setList(aList.getList())) {
                     cout << "\n### There is no graph and choose 1 first. ###\n";
                     break;
                 }
                 // compute
-                aGraph.computeBFS();
+                aGraph2.computeBFS();
                 cout << "\n<<< There are " << aList.getIdNum() << " IDs in total. >>>\n";
-                aFile.writeFile2(aGraph.getList(), aList.getIdNum());
+                aFile.writeFile2(aGraph2.getList(), aList.getIdNum());
+                break;
+            case 3:
+
+                break;
+            case 4:
+                aGraph4.reset();
+                // check adjList existence first
+                if (!aGraph4.setList(aList.getList())) {
+                    cout << "\n### There is no graph and choose 1 first. ###\n";
+                    break;
+                }
+                start = clock(); // start time
+                // compute
+                aGraph4.traverse();
+                end = clock(); // end time
+                elapsed_time = double(end - start) / (CLOCKS_PER_SEC / 1000);
+                cout << "[Elapsed time] " << elapsed_time << " ms" << endl;
+                aFile.writeFile4(aGraph4.getList(), aList.getIdNum());
                 break;
             default:
                 cout << "\nCommand does not exist!";
