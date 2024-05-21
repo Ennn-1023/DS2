@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <random>
 #include <chrono>
+#include <ctime>
 using namespace std;
 struct DataType { // input data type
     char putID[12] = {0}; // 發訊者學號 
@@ -512,7 +513,8 @@ public:
         cin >> topK;
         // check range
         while (topK < 1 || topK > total) {
-            cout << "\n###" << topK << " is NOT in [1," << total << "] ###";
+            cout << "\n### " << topK << " is NOT in [1," << total << "] ###\n";
+            cout << "\nInput an integer to show top-K in [1" << "," << total << "]: ";
             cin >> topK;
         }
 
@@ -541,7 +543,6 @@ public:
         else {
             // if the valid gate weight have not been set up
             // set gate weight
-            srand((unsigned int)(getID.weight*time(NULL)));
             getID.threshold = 0.8 + static_cast<double>(rand()) / RAND_MAX * 0.2;
             return true;
         }
@@ -613,6 +614,7 @@ int main() {
     WeightedGraph aGraph4;
     bool keepRun = true;
     int command = -1;
+    srand(time(NULL)); // seting random seed
     while ( keepRun ) {
         cout << "\n**** Graph data manipulation *****"
                 "\n* 0. QUIT                        *"
