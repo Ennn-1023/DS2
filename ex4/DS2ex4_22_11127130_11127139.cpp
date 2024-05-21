@@ -666,8 +666,13 @@ int main() {
                 }
 
                 float th;
-                cout << endl << "Input a real number in [0.5,1]: ";
+                cout << "\nInput a real number in [0.5,1]: ";
                 cin >> th;
+                while (th < 0.5 || th > 1) {
+                    cout << "\n### It is NOT in [0.5,1] ###\n";
+                    cout << "\nInput a real number in [0.5,1]: ";
+                    cin >> th;
+                }
                 // compute
                 aGraph.computeDFS(th);
                 cout << "\n<<< There are " << aGraph.getList().size() << " IDs in total. >>>\n";
