@@ -525,7 +525,7 @@ public:
         else {
             // if the valid gate weight have not been set up
             // set gate weight
-            srand(getID.weight* time(NULL));
+            srand((unsigned int)(getID.weight*time(NULL)));
             getID.threshold = 0.8 + static_cast<double>(rand()) / RAND_MAX * 0.2;
             return true;
         }
