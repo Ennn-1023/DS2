@@ -100,7 +100,7 @@ public:
             return true;
         }
     }
-    bool writeFile2(const vector<pair<string, vector<string>>>& cntList, int idnum) { // ºg¿…
+    bool writeFile2(const vector<pair<string, vector<Node>>>& cntList, int idnum) { // ºg¿…
         ofstream outFile;
         outFile.open("pairs" + fileID + ".cnt");
         if (!outFile) {
@@ -116,7 +116,7 @@ public:
                 outFile << "[" << setw(3) << i+1 << "] " << cntList[i].first << "(" << connect << "): \n";
                 int j = 0;
                 for (auto node : cntList[i].second) {
-                    outFile << "\t(" << setw(2) << j+1 <<") " << node;
+                    outFile << "\t(" << setw(2) << j+1 <<") " << node.id;
                     if ((j+1) % 12 == 0)
                         outFile << "\n";
                     j++;
@@ -257,8 +257,8 @@ public:
 class DirectGraph {
 private:
     // data member
-    unordered_map<string, vector<string>> adjList;
-    vector<pair<string, vector<string>>> connectedList;
+    unordered_map<string, vector<Node>> adjList;
+    vector<pair<string, vector<Node>>> connectedList;
 
 public:
     DirectGraph() {
@@ -273,9 +273,9 @@ public:
         }
         else { // setting
             for (auto row : inputList) {
-                vector<string> temp;
+                vector<Node> temp;
                 for (int i = 1; i < row.size(); i++) {
-                    temp.push_back(row[i].id);
+                    temp.push_back(row[i]);
                 }
                 adjList[row[0].id] = temp; // insert into map
             }
@@ -290,22 +290,22 @@ public:
 
         sort(connectedList.begin(), connectedList.end(), compareBySize);
     }
-    vector<string> findBFS(const string& sID) {
+    vector<Node> findBFS(const string& sID) {
         queue<string> aQueue;
         aQueue.push(sID);
-        vector<string> returnList; //store the return visited node
+        vector<Node> returnList; //store the return visited node
         unordered_map<string, int> visitedList; // record visited node
         visitedList[sID] = 1;
         while (!aQueue.empty()) {
             string curNode = aQueue.front(); // get front
-            vector<string> adjNodes = adjList[curNode];
+            vector<Node> adjNodes = adjList[curNode];
             aQueue.pop();
-            for (string adjNode : adjNodes) { // check every node which is adjacent to curNode;
+            for (Node adjNode : adjNodes) { // check every node which is adjacent to curNode;
 
-                if ( visitedList[adjNode] != 1 ) {
+                if ( visitedList[adjNode.id] != 1 ) {
                     // not found in visitedList
-                    aQueue.push(adjNode); // enqueue
-                    visitedList[adjNode] = 1;
+                    aQueue.push(adjNode.id); // enqueue
+                    visitedList[adjNode.id] = 1;
                     returnList.emplace_back(adjNode);
                 }
             }
@@ -318,11 +318,11 @@ public:
         connectedList.clear();
         adjList.clear();
     }
-    vector<pair<string, vector<string>>>& getList() {
+    vector<pair<string, vector<Node>>>& getList() {
         return connectedList;
     }
     // comparator
-    static bool compareBySize(const pair<string, vector<string>>& n1, const pair<string, vector<string>>& n2) {
+    static bool compareBySize(const pair<string, vector<Node>>& n1, const pair<string, vector<Node>>& n2) {
         int n1Size = n1.second.size(), n2Size = n2.second.size();
         if (n1Size == n2Size) { // order by sID ascii
             return n1.first < n2.first ;
@@ -330,8 +330,8 @@ public:
         else // order by num of connection
             return n1Size > n2Size;
     }
-    static bool sortNode(const string& id1, const string& id2) {
-        return id1 < id2;
+    static bool sortNode(const Node& id1, const Node& id2) {
+        return id1.id < id2.id;
     }
 };
 
