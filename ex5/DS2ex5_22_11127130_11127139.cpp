@@ -107,7 +107,7 @@ public:
             totalRuns = totalRuns%2 + totalRuns/2;
         }
         rename(("tmp"+ to_string(round)+ "_1.bin").c_str()
-               , ("order"+ fileID + ".bin").c_str());
+                , ("order"+ fileID + ".bin").c_str());
         cout << "\nNow there are "<< totalRuns << " runs.\n";
     }
     void mergeFiles(int runs, int round) {
@@ -205,29 +205,29 @@ int main() {
                 "\n***********************************************";
         // try to get input file number first
         if (sorter.getID()) {
-             inStart = chrono::system_clock::now(); // internal start time point
-             int totalRuns = sorter.partialSort(); // sort by maxSize = 300
-             inEnd = chrono::system_clock::now(); // internal sort end time point
-             cout << "\nThe internal sort is completed. Check the initial sorted runs!\n";
-             exStart = chrono::system_clock::now(); // external start time point
-             sorter.mergeAll(totalRuns); // merge all file into a order#.bin
-             exEnd = chrono::system_clock::now(); // external end time point
+            inStart = chrono::system_clock::now(); // internal start time point
+            int totalRuns = sorter.partialSort(); // sort by maxSize = 300
+            inEnd = chrono::system_clock::now(); // internal sort end time point
+            cout << "\nThe internal sort is completed. Check the initial sorted runs!\n";
+            exStart = chrono::system_clock::now(); // external start time point
+            sorter.mergeAll(totalRuns); // merge all file into a order#.bin
+            exEnd = chrono::system_clock::now(); // external end time point
 
-             // output time information
-             inTime = chrono::duration_cast<chrono::microseconds>(inEnd - inStart);
-             exTime = chrono::duration_cast<chrono::microseconds>(exEnd - exStart);
-             cout << "\nThe execution time ...";
-             cout << "\nInternal Sort = " << inTime.count()/1000.0 << " ms";
-             cout << "\nExternal Sort = " << exTime.count()/1000.0 << " ms";
-             cout << "\nTotal Execution Time = " << inTime.count()/1000.0+ exTime.count()/1000.0 << endl;
+            // output time information
+            inTime = chrono::duration_cast<chrono::microseconds>(inEnd - inStart);
+            exTime = chrono::duration_cast<chrono::microseconds>(exEnd - exStart);
+            cout << "\nThe execution time ...";
+            cout << "\nInternal Sort = " << inTime.count()/1000.0 << " ms";
+            cout << "\nExternal Sort = " << exTime.count()/1000.0 << " ms";
+            cout << "\nTotal Execution Time = " << (inTime.count()+exTime.count())/1000.0 << endl;
         }
 
         // ask user quit or not
         cout << "\n[0]Quit or [Any other key]continue?\n";
-        int keyInValue;
+        string keyInValue;
         cin >> keyInValue;
 
-        if (keyInValue == 0)
+        if (keyInValue == "0")
             keepRun = false;
     }
 }
