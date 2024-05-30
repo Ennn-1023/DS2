@@ -2,15 +2,13 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include <cstring> // strcmp()
-#include <iomanip> // setw()
+
 #include <algorithm> // sort()
 #include <chrono>
-#include <ctime>
 #include <cstdio>
 using namespace std;
 
-#define SIZE = 300;
+#define SIZE 300
 
 struct DataType { // input data type
     char putID[10] = {0}; // 發訊者學號
@@ -21,7 +19,6 @@ struct DataType { // input data type
 class ExternalSort {
 private:
     string fileID;
-    // ifstream inFile;
     vector<DataType> buffer;
 public:
     ExternalSort() {
@@ -75,7 +72,7 @@ public:
         while (true) {
             int i = 0;
             buffer.clear();
-            while (i < 300 && inFile.read((char*)&oneR, size)) {
+            while (i < SIZE && inFile.read((char*)&oneR, size)) {
                 buffer.push_back(oneR);
                 i++;
             }
@@ -206,21 +203,26 @@ int main() {
                 "\n Mission 1: External Merge Sort on a Big File *"
                 "\n Mission 2: Construction of Primary Index     *"
                 "\n***********************************************";
-         if (sorter.getID()) {
-             inStart = chrono::system_clock::now();
-             int totalRuns = sorter.partialSort();
-             inEnd = chrono::system_clock::now();
+        // try to get input file number first
+        if (sorter.getID()) {
+             inStart = chrono::system_clock::now(); // internal start time point
+             int totalRuns = sorter.partialSort(); // sort by maxSize = 300
+             inEnd = chrono::system_clock::now(); // internal sort end time point
              cout << "\nThe internal sort is completed. Check the initial sorted runs!\n";
-             exStart = chrono::system_clock::now();
-             sorter.mergeAll(totalRuns);
-             exEnd = chrono::system_clock::now();
+             exStart = chrono::system_clock::now(); // external start time point
+             sorter.mergeAll(totalRuns); // merge all file into a order#.bin
+             exEnd = chrono::system_clock::now(); // external end time point
+
+             // output time information
              inTime = chrono::duration_cast<chrono::microseconds>(inEnd - inStart);
              exTime = chrono::duration_cast<chrono::microseconds>(exEnd - exStart);
              cout << "\nThe execution time ...";
              cout << "\nInternal Sort = " << inTime.count()/1000.0 << " ms";
              cout << "\nExternal Sort = " << exTime.count()/1000.0 << " ms";
              cout << "\nTotal Execution Time = " << inTime.count()/1000.0+ exTime.count()/1000.0 << endl;
-         }
+        }
+
+        // ask user quit or not
         cout << "\n[0]Quit or [Any other key]continue?\n";
         int keyInValue;
         cin >> keyInValue;
