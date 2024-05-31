@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-
+#include <queue>
 #include <algorithm> // sort()
 #include <chrono>
 #include <cstdio>
@@ -20,6 +20,7 @@ class ExternalSort {
 private:
     string fileID;
     vector<DataType> buffer;
+    vector<pair<float, int>> indexArr;
 public:
     ExternalSort() {
         reset();
@@ -29,6 +30,7 @@ public:
     }
     void reset() {
         fileID.clear();
+        indexArr.clear();
     }
     bool getID() {
         // get input file ID, check if it exists
@@ -48,7 +50,7 @@ public:
     bool checkFIle(const string& fID) {
         // check the data member: fileID exists or not
         string fileName = "pairs" + fID + ".bin";
-        ifstream aFile(fileName.c_str(), ios::binary);
+        ifstream aFile(fileName, ios::binary);
         // check if the file can be opened or not
         bool isOpen = aFile.is_open();
         aFile.close(); // close the file
@@ -64,7 +66,7 @@ public:
     int partialSort() {
         // sort the input file by at most 300 rows
         // open file
-        ifstream inFile(("pairs" + fileID + ".bin").c_str(), ios::binary);
+        ifstream inFile(("pairs" + fileID + ".bin"), ios::binary);
         ofstream outFile;
         int runs = 0; // record how many runs being produced
         DataType oneR;
@@ -91,10 +93,10 @@ public:
         // write buffer into file
         ofstream outFile;
         int size = sizeof(DataType);
-        outFile.open(fName.c_str(), ios::binary);
-        for (DataType& oneR: buffer) {
-            outFile.write((char*)&oneR, size);
-        }
+        outFile.open(fName, ios::binary);
+
+        outFile.write((char*)buffer.data(), size*buffer.size());
+        buffer.clear();
         outFile.close();
     }
     void mergeAll(int totalRuns) {
@@ -113,76 +115,113 @@ public:
     void mergeFiles(int runs, int round) {
         // merge two sorted file each time till there is no more than one file
 
-        DataType row1, row2;
         int no;
         for (no = 1; no < runs; no+=2) {
             // for each round, merge no and no+1 if no+1 <= runs
-            string inFile1 = "tmp"+ to_string(round-1) + "_"+ to_string(no) + ".bin";
-            string inFile2 = "tmp"+ to_string(round-1) + "_"+ to_string(no+1) + ".bin";
-            string outFile = "tmp"+ to_string(round) + "_" + to_string(no/2 +1) + ".bin";
+            char inFile1[20], inFile2[20], outFile[20];
+            sprintf(inFile1, "tmp%d_%d.bin", round - 1, no);
+            sprintf(inFile2, "tmp%d_%d.bin", round-1, no+1);
+            if (runs == 2) {
+                sprintf(outFile, "order%s.bin", fileID.c_str());
+            }
+            else
+             sprintf(outFile, "tmp%d_%d.bin", round, no/2 +1);
             mergePair(inFile1, inFile2, outFile);
         }
         if (no == runs) { // odd number, last file without pair to be merged
             // rename the file with no pair to merge for next round
-            rename( ("tmp"+ to_string(round-1) + "_"+ to_string(no) + ".bin").c_str()
-                    ,("tmp"+ to_string(round) + "_" + to_string(no/2 +1) + ".bin").c_str());
+            char inFile_name[20], newName[20];
+            sprintf(inFile_name, "tmp%d_%d.bin", round - 1, no);
+            sprintf(newName, "tmp%d_%d.bin", round, no/2 +1);
+            rename( inFile_name, newName);
         }
     }
-    void mergePair(const string& inFileName1, const string& inFileName2, const string& outFileName) {
+    void mergePair(char* inFileName1, char* inFileName2, char* outFileName) {
         ifstream inFile1, inFile2;
         ofstream outFile;
-        inFile1.open(inFileName1.c_str(), ios::binary);
-        inFile2.open(inFileName2.c_str(), ios::binary);
-        outFile.open(outFileName.c_str(), ios::binary);
+        inFile1.open(inFileName1, ios::binary);
+        inFile2.open(inFileName2, ios::binary);
+        outFile.open(outFileName, ios::binary);
         // compare the largest weight and put it into outFile
-        vector<DataType> tmp1, tmp2;
-        DataType row;
-        int size = sizeof(row);
-        while ( !inFile1.eof() && !inFile2.eof()) {
-            // get row from file
-            if (tmp1.empty()) {
-                inFile1.read((char*) &row, size);
-                tmp1.push_back(row);
-            }
-            if (tmp2.empty()) {
-                inFile2.read((char*) &row, size);
-                tmp2.push_back(row);
-            }
+        DataType tmp1, tmp2;
+        int size = sizeof(DataType);
+        inFile1.read((char*) &tmp1, size);
+        inFile2.read((char*) &tmp2, size);
+        bool file1Empty = false;
+        bool file2Empty = false;
+        while (true) {
 
-            // compare and write file
-            if (tmp1[0].weight >= tmp2[0].weight) {
-                row = tmp1[0];
-                tmp1.pop_back();
+            if (tmp1.weight >= tmp2.weight) {
+                outFile.write((char*)&tmp1, size);
+                // get row from file
+                if (!inFile1.read((char*)&tmp1, size)) {
+                    file1Empty = true;
+                    break;
+                }
             }
             else {
-                row = tmp2[0];
-                tmp2.pop_back();
+                outFile.write((char*)&tmp2, size);
+                // get row from file
+                if (!inFile2.read((char*)&tmp2, size)) {
+                    file2Empty = true;
+                    break;
+                }
             }
-            outFile.write((char*)&row, size);
         }
         // one of the file is empty now
-        if (tmp1.empty()) { // inFile1 is empty
-            outFile.write((char*)&tmp2[0], size);
-            while (!inFile2.eof()) {
-                inFile2.read((char*)&row, size);
-                outFile.write((char*)&row, size);
+        if (file1Empty) { // inFile1 is empty
+            outFile.write((char*)&tmp2, size);
+            while (inFile2.read((char*)&tmp2, size)) {
+                outFile.write((char*)&tmp2, size);
             }
         }
         else {
-            outFile.write((char*)&tmp1[0], size);
-            while (!inFile1.eof()) {
-                inFile1.read((char*)&row, size);
-                outFile.write((char*)&row, size);
+            outFile.write((char*)&tmp1, size);
+            while (inFile1.read((char*)&tmp1, size)) {
+                outFile.write((char*)&tmp1, size);
             }
         }
         inFile1.close();
         inFile2.close();
         // remove previous file
-        remove(inFileName1.c_str());
-        remove(inFileName2.c_str());
+        remove(inFileName1);
+        remove(inFileName2);
         outFile.close();
     }
-
+    void getIndexArray() {
+        // read sorted file from memory
+        ifstream inFile("order"+fileID+".bin", ios::binary);
+        int len = sizeof(DataType);
+        int iteration = 0;
+        float lastWeight = 1.1;
+        int offset = -1;
+        while(true) {
+            buffer.resize(SIZE); // read at most 300 each time
+            inFile.read((char*)buffer.data(), SIZE*len);
+            int bytesRead = inFile.gcount();
+            if (bytesRead == 0) {
+                break;
+            }
+            buffer.resize(bytesRead/len);
+            for (int i = 0; i < SIZE; i++) {
+                // check each key
+                if (buffer[i].weight < lastWeight) {
+                    lastWeight = buffer[i].weight;
+                    offset = i + iteration*SIZE;
+                    pair<float,int> tmp(lastWeight, offset);
+                    indexArr.push_back(tmp);
+                }
+            }
+            iteration++;
+        }
+    }
+    void printIndex() {
+        int size = indexArr.size();
+        cout << "\n<Primary index>: (key, offset)";
+        for(int i = 0; i < size; i++) {
+            cout << endl << "[" << i+1 << "] (" << indexArr[i].first << ", " << indexArr[i].second << ")";
+        }
+    }
 };
 
 
@@ -195,7 +234,7 @@ int main() {
     chrono::time_point<chrono::system_clock> inStart, inEnd;
     chrono::time_point<chrono::system_clock> exStart, exEnd;
     chrono::microseconds inTime, exTime;
-    // srand(time(NULL)); // setting random seed
+
     while ( keepRun ) {
         cout << "\n*** The buffer size is 300"
                 "\n***********************************************"
@@ -204,6 +243,7 @@ int main() {
                 "\n Mission 2: Construction of Primary Index     *"
                 "\n***********************************************";
         // try to get input file number first
+        sorter.reset();
         if (sorter.getID()) {
             inStart = chrono::system_clock::now(); // internal start time point
             int totalRuns = sorter.partialSort(); // sort by maxSize = 300
@@ -220,6 +260,13 @@ int main() {
             cout << "\nInternal Sort = " << inTime.count()/1000.0 << " ms";
             cout << "\nExternal Sort = " << exTime.count()/1000.0 << " ms";
             cout << "\nTotal Execution Time = " << (inTime.count()+exTime.count())/1000.0 << endl;
+
+            // mission2
+            cout << "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                    "\nMission 2: Build the primary index"
+                    "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
+            sorter.getIndexArray();
+            sorter.printIndex();
         }
 
         // ask user quit or not
