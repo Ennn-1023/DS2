@@ -67,7 +67,7 @@ bool internalSort(string fileID) { // 內部排序(包含讀檔寫檔)
             }
 
             outputFileNum++;
-            sort(buffer.begin(), buffer.end(), mycmp); // 排序
+            stable_sort(buffer.begin(), buffer.end(), mycmp); // 排序
             string fileName = "1output" + to_string(outputFileNum) + ".bin";
             writeFile(buffer, fileName); // 每300筆資料寫一次檔
 
