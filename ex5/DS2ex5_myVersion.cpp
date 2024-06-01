@@ -257,7 +257,7 @@ int main() {
             cout << "\nThe execution time ...";
             cout << "\nInternal Sort = " << inTime.count()/1000.0 << " ms";
             cout << "\nExternal Sort = " << exTime.count()/1000.0 << " ms";
-            cout << "\nTotal Execution Time = " << (inTime.count()+exTime.count())/1000.0 << endl;
+            cout << "\nTotal Execution Time = " << (inTime.count()+exTime.count())/1000.0 << " ms\n";
 
             // mission2
             cout << "\n"
