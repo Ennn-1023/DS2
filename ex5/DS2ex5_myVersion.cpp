@@ -201,7 +201,8 @@ public:
                 break;
             }
             buffer.resize(bytesRead/len);
-            for (int i = 0; i < SIZE; i++) {
+            int size = buffer.size();
+            for (int i = 0; i < size; i++) {
                 // check each key
                 if (buffer[i].weight < lastWeight) {
                     lastWeight = buffer[i].weight;

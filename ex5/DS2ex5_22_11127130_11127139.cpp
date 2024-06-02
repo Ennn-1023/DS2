@@ -196,7 +196,7 @@ void externalSort(string fileID) {
     remove(fileName1.c_str()); // 刪除經外部排序好的最終檔案 (smallDataType)
 }
 
-void getIndexArray(vector<pair<float, int>>& indexArr, const string& fileID) {
+void    getIndexArray(vector<pair<float, int>>& indexArr, const string& fileID) {
     // read sorted file from memory
     ifstream inFile("order"+fileID+".bin", ios::binary);
     int len = sizeof(DataType);
@@ -212,7 +212,8 @@ void getIndexArray(vector<pair<float, int>>& indexArr, const string& fileID) {
             break;
         }
         buffer.resize(bytesRead/len);
-        for (int i = 0; i < BUFFER_SIZE; i++) {
+        int size = buffer.size();
+        for (int i = 0; i < size; i++) {
             // check each key
             if (buffer[i].weight < lastWeight) {
                 lastWeight = buffer[i].weight;
