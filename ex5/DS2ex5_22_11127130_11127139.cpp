@@ -232,6 +232,71 @@ void printIndex(const vector<pair<float, int>>& indexArr) {
         cout << endl << "[" << i+1 << "] (" << indexArr[i].first << ", " << indexArr[i].second << ")";
     }
 }
+void outputText(float thValue,const string& fileName, vector<pair<int, DataType>> arr, int num, chrono::microseconds time) {
+    ofstream outFile(fileName);
+    outFile << "Search " << thValue << ":" << num << " records, " << time.count()/1000.0 << " ms";
+    for (pair<int, DataType> aRow: arr) {
+        outFile << "\n[" << aRow.first+1 << "] " << aRow.second.putID << " " << aRow.second.getID
+                << " " << aRow.second.weight;
+    }
+}
+void mission3(const vector<pair<float, int>>& indexArr, const string& fileID) {
+    // get threshold value
+    cout << "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+            "\nMission 3: Threshold search on primary index"
+            "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
+    string cmd = "1";
+    while (cmd != "0") {
+        cout << "\nPlease input a threshold in the range [0,1]: \n";
+        float thValue;
+        cin >> thValue; // input thValue
+        // range check
+        if (thValue <=0 || thValue > 1) {
+            cout << "\nThe threshold is not in the range [0,1]!\n";
+            continue;
+        }
+        // do write txt
+        ifstream inFile("order"+fileID+".bin", ios::binary);
+
+        vector<pair<int,DataType>> tempArr;
+
+        // find weight >= thValue
+        chrono::time_point<chrono::system_clock> start, end;
+        chrono::microseconds time;
+        start = chrono::system_clock::now();
+        bool done = false;
+        int size = sizeof(DataType);
+        int numOfData = 0;
+        DataType oneR;
+        for (auto& element: indexArr) {
+            if (element.first < thValue) {
+                end = chrono::system_clock::now();
+                done = true;
+                numOfData = element.second;
+                break;
+            }
+            else {
+                inFile.seekg(size*element.second);
+                inFile.read((char*)&oneR, size);
+                tempArr.push_back(pair<int,DataType>(element.second,oneR));
+            }
+        }
+        if (!done) {
+            end = chrono::system_clock::now();
+            numOfData = indexArr.back().second+1;
+        }
+
+        time = chrono::duration_cast<chrono::microseconds>(end - start);
+        // output file
+        outputText(thValue, "order"+fileID+".txt", tempArr, numOfData, time);
+
+
+        time = chrono::duration_cast<chrono::microseconds>(end - start);
+        inFile.close();
+        cout << "\n[0]Quit or [Any other key]continue?\n";
+        cin >> cmd;
+    }
+}
 
 int main() {
     bool keepRun = true;
@@ -284,6 +349,7 @@ int main() {
                     getIndexArray(indexArr, fileID);
                     printIndex(indexArr);
 
+                    mission3(indexArr, fileID);
                     cout << "\n[0]Quit or [Any other key]continue?\n";
                     cin >> command; // get command
                     if (command == "0") keepRun = false;
